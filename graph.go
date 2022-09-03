@@ -146,6 +146,10 @@ type Node[T any] struct {
 
 	From []*Node[T]
 	To   []*Node[T]
+
+	Metadata struct {
+		Shape Shape
+	}
 }
 
 func (n *Node[T]) String() string {

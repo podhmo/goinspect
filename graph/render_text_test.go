@@ -1,4 +1,4 @@
-package goinspect
+package graph
 
 import (
 	"bytes"

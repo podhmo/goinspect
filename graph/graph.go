@@ -1,15 +1,15 @@
-package goinspect
+package graph
 
 import "fmt"
 
 func IntGraph(values ...int) *Graph[int, int] {
-	return NewGraph(func(v int) int { return v }, values...)
+	return New(func(v int) int { return v }, values...)
 }
 func StringGraph(values ...string) *Graph[string, string] {
-	return NewGraph(func(v string) string { return v }, values...)
+	return New(func(v string) string { return v }, values...)
 }
 
-func NewGraph[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
+func New[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
 	g := &Graph[K, T]{
 		KeyFunc: keyFunc,
 		seen:    make(map[K]*Node[T], len(values)),

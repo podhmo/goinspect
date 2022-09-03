@@ -15,7 +15,7 @@ func TestRenderText(t *testing.T) {
 		want string
 	}{
 		{msg: "no-link", want: "1;\n2;\n3;", g: IntGraph(1, 2, 3)},
-		{msg: "link1", want: "1 -> 2;\n2 -> 3;",
+		{msg: "link1", want: "1;\n2;\n1 -> 2;\n3;\n2 -> 3;",
 			g: func() *Graph[int, int] {
 				g := IntGraph()
 				n1, _ := g.Add(1)
@@ -24,7 +24,7 @@ func TestRenderText(t *testing.T) {
 				return g
 			}(),
 		},
-		{msg: "link2", want: "1 -> 2;\n2 -> 3;\n2 -> 4;\n1 -> 5;",
+		{msg: "link2", want: "1;\n2;\n1 -> 2;\n3;\n2 -> 3;\n4;\n2 -> 4;\n5;\n1 -> 5;",
 			g: func() *Graph[int, int] {
 				g := IntGraph()
 				n1, _ := g.Add(1)
@@ -35,7 +35,7 @@ func TestRenderText(t *testing.T) {
 				return g
 			}(),
 		},
-		{msg: "link3", want: "1 -> 3;\n1 -> 4;\n2 -> 3;\n2 -> 4;",
+		{msg: "link3", want: "1;\n3;\n1 -> 3;\n4;\n1 -> 4;\n2;\n2 -> 3;\n2 -> 4;",
 			g: func() *Graph[int, int] {
 				g := IntGraph()
 

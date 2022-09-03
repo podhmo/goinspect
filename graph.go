@@ -101,9 +101,8 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 		}
 		seen[k] = struct{}{}
 
-		if len(n.To) == 0 {
-			fn([]*Node[T]{n})
-		} else {
+		fn([]*Node[T]{n})
+		if len(n.To) > 0 {
 			q := make([][]*Node[T], 0, len(n.To))
 			for _, next := range n.To {
 				q = append(q, []*Node[T]{n, next})
@@ -118,6 +117,14 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 					continue
 				}
 				seen[k] = struct{}{}
+
+				{
+					k := key{prev: next.ID}
+					if _, ok := seen[k]; !ok {
+						fn([]*Node[T]{next})
+						seen[k] = struct{}{}
+					}
+				}
 
 				fn(path)
 				if len(next.To) > 0 {

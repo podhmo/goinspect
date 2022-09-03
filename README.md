@@ -1,0 +1,2 @@
+# goinspect
+individual inspection command

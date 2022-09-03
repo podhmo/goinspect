@@ -6,10 +6,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func newGraph(values ...int) *Graph[int, int] {
-	return NewGraph(func(v int) int { return v }, values...)
-}
-
 func TestGraphWalk(t *testing.T) {
 	type ref struct{ Xs []int }
 
@@ -18,14 +14,14 @@ func TestGraphWalk(t *testing.T) {
 		g    *Graph[int, int]
 		want []int
 	}{
-		{msg: "walk ε -> ", g: newGraph(), want: nil},
-		{msg: "walk 1 -> 1", g: newGraph(1), want: []int{1}},
-		{msg: "walk 1,2,3 -> 1,2,3", g: newGraph(1, 2, 3), want: []int{1, 2, 3}},
-		{msg: "walk 1,2,2,1,3 -> 1,2,3", g: newGraph(1, 2, 3), want: []int{1, 2, 3}},
+		{msg: "walk ε -> ", g: IntGraph(), want: nil},
+		{msg: "walk 1 -> 1", g: IntGraph(1), want: []int{1}},
+		{msg: "walk 1,2,3 -> 1,2,3", g: IntGraph(1, 2, 3), want: []int{1, 2, 3}},
+		{msg: "walk 1,2,2,1,3 -> 1,2,3", g: IntGraph(1, 2, 3), want: []int{1, 2, 3}},
 		{msg: "walk 1,{2,3,4},{5,6} -> 1,2,3,4,5,6", want: []int{1, 2, 3, 4, 5, 6},
 			g: func() *Graph[int, int] {
 				// 1,
-				g := newGraph(1)
+				g := IntGraph(1)
 
 				// 2 -> 3 -> 4
 				n2, _ := g.Add(2)

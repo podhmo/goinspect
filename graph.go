@@ -2,6 +2,10 @@ package goinspect
 
 import "fmt"
 
+func IntGraph(values ...int) *Graph[int, int] {
+	return NewGraph(func(v int) int { return v }, values...)
+}
+
 func NewGraph[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
 	g := &Graph[K, T]{
 		KeyFunc: keyFunc,

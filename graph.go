@@ -51,6 +51,53 @@ func (g *Graph[K, T]) LinkTo(node *Node[T], v T) (child *Node[T], added bool) {
 	return child, true
 }
 
+func (g *Graph[K, T]) LinkFrom(node *Node[T], v T) (child *Node[T], added bool) {
+	k := g.KeyFunc(v)
+	child, ok := g.seen[k]
+	if !ok {
+		g.c++
+		child = &Node[T]{ID: g.c, Value: v}
+		g.seen[k] = child
+	}
+
+	for _, x := range node.From {
+		if x.ID == child.ID {
+			return child, false
+		}
+	}
+	node.From = append(node.From, child)
+	return child, true
+}
+
+func (g *Graph[K, T]) LinkBoth(node *Node[T], v T) (child *Node[T], added bool) {
+	k := g.KeyFunc(v)
+	child, ok := g.seen[k]
+	if !ok {
+		g.c++
+		child = &Node[T]{ID: g.c, Value: v}
+		g.seen[k] = child
+	}
+
+	toAdded := false
+	for _, x := range node.To {
+		if x.ID == child.ID {
+			toAdded = true
+			break
+		}
+	}
+	node.To = append(node.To, child)
+
+	fromAdded := false
+	for _, x := range node.From {
+		if x.ID == child.ID {
+			fromAdded = true
+			break
+		}
+	}
+	node.From = append(node.From, child)
+	return child, toAdded || fromAdded
+}
+
 func (g *Graph[K, T]) Walk(fn func(*Node[T])) {
 	seen := map[int]struct{}{}
 	for _, n := range g.Nodes {

@@ -6,14 +6,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Walk[T any](g *Graph[T], fn func(*Node[T])) {
+func Walk[K comparable, T any](g *Graph[K, T], fn func(*Node[T])) {
 	for _, n := range g.Nodes {
 		fn(n)
 	}
 }
 
-func newGraph(values ...int) *Graph[int] {
-	return NewGraph(values...)
+func newGraph(values ...int) *Graph[int, int] {
+	return NewGraph(func(v int) int { return v }, values...)
 }
 
 func TestGraphWalk(t *testing.T) {
@@ -21,12 +21,13 @@ func TestGraphWalk(t *testing.T) {
 
 	cases := []struct {
 		msg  string
-		g    *Graph[int]
+		g    *Graph[int, int]
 		want []int
 	}{
 		{msg: "walk ε -> ", g: newGraph(), want: nil},
 		{msg: "walk 1 -> 1", g: newGraph(1), want: []int{1}},
 		{msg: "walk 1,2,3 -> 1,2,3", g: newGraph(1, 2, 3), want: []int{1, 2, 3}},
+		{msg: "walk 1,2,2,1,3 -> 1,2,3", g: newGraph(1, 2, 3), want: []int{1, 2, 3}},
 	}
 
 	for _, c := range cases {

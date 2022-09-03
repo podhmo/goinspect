@@ -1,17 +1,34 @@
 package goinspect
 
-func NewGraph[T any](values ...T) *Graph[T] {
-	nodes := make([]*Node[T], len(values))
-	for i, v := range values {
-		nodes[i] = &Node[T]{ID: i, Value: v}
+func NewGraph[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
+	g := &Graph[K, T]{
+		KeyFunc: keyFunc,
+		seen:    make(map[K]*Node[T], len(values)),
 	}
-	return &Graph[T]{
-		Nodes: nodes,
+
+	for _, v := range values {
+		g.Add(v)
 	}
+	return g
 }
 
-type Graph[T any] struct {
-	Nodes []*Node[T]
+type Graph[K comparable, T any] struct {
+	Nodes   []*Node[T]
+	KeyFunc func(T) K
+
+	seen map[K]*Node[T]
+}
+
+func (g *Graph[K, T]) Add(v T) (added bool) {
+	k := g.KeyFunc(v)
+	_, ok := g.seen[k]
+	if ok {
+		return false
+	}
+	node := &Node[T]{ID: len(g.Nodes), Value: v}
+	g.seen[k] = node
+	g.Nodes = append(g.Nodes, node)
+	return true
 }
 
 type Node[T any] struct {

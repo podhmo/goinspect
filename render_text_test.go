@@ -35,6 +35,20 @@ func TestRenderText(t *testing.T) {
 				return g
 			}(),
 		},
+		{msg: "link3", want: "1 -> 3;\n1 -> 4;\n2 -> 3;\n2 -> 4;",
+			g: func() *Graph[int, int] {
+				g := IntGraph()
+
+				n1, _ := g.Add(1)
+				g.LinkTo(n1, 3)
+				g.LinkTo(n1, 4)
+
+				n2, _ := g.Add(2)
+				g.LinkTo(n2, 3)
+				g.LinkTo(n2, 4)
+				return g
+			}(),
+		},
 	}
 
 	for _, c := range cases {

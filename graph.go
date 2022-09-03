@@ -5,6 +5,9 @@ import "fmt"
 func IntGraph(values ...int) *Graph[int, int] {
 	return NewGraph(func(v int) int { return v }, values...)
 }
+func StringGraph(values ...string) *Graph[string, string] {
+	return NewGraph(func(v string) string { return v }, values...)
+}
 
 func NewGraph[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
 	g := &Graph[K, T]{
@@ -84,13 +87,19 @@ func (g *Graph[K, T]) Walk(fn func(*Node[T])) {
 	}
 }
 
+type key struct {
+	prev int
+	next int
+}
+
 func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
-	seen := map[int]struct{}{}
+	seen := map[key]struct{}{}
 	for _, n := range g.Nodes {
-		if _, ok := seen[n.ID]; ok {
+		k := key{prev: n.ID}
+		if _, ok := seen[k]; ok {
 			continue
 		}
-		seen[n.ID] = struct{}{}
+		seen[k] = struct{}{}
 
 		if len(n.To) == 0 {
 			fn([]*Node[T]{n})
@@ -103,11 +112,12 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 			var path []*Node[T]
 			for len(q) > 0 {
 				path, q = q[0], q[1:]
-				next := path[len(path)-1]
-				if _, ok := seen[next.ID]; ok {
+				n, next := path[len(path)-2], path[len(path)-1]
+				k := key{prev: n.ID, next: next.ID}
+				if _, ok := seen[k]; ok {
 					continue
 				}
-				seen[next.ID] = struct{}{}
+				seen[k] = struct{}{}
 
 				fn(path)
 				if len(next.To) > 0 {

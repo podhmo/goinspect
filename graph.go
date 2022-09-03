@@ -17,18 +17,64 @@ type Graph[K comparable, T any] struct {
 	KeyFunc func(T) K
 
 	seen map[K]*Node[T]
+	c    int
 }
 
-func (g *Graph[K, T]) Add(v T) (added bool) {
+func (g *Graph[K, T]) Add(v T) (node *Node[T], added bool) {
 	k := g.KeyFunc(v)
-	_, ok := g.seen[k]
+	node, ok := g.seen[k]
 	if ok {
-		return false
+		return node, false
 	}
-	node := &Node[T]{ID: len(g.Nodes), Value: v}
+	g.c++
+	node = &Node[T]{ID: g.c, Value: v}
 	g.seen[k] = node
 	g.Nodes = append(g.Nodes, node)
-	return true
+	return node, true
+}
+
+func (g *Graph[K, T]) LinkTo(node *Node[T], v T) (child *Node[T], added bool) {
+	k := g.KeyFunc(v)
+	child, ok := g.seen[k]
+	if !ok {
+		g.c++
+		child = &Node[T]{ID: g.c, Value: v}
+		g.seen[k] = child
+	}
+
+	for _, x := range node.To {
+		if x.ID == child.ID {
+			return child, false
+		}
+	}
+	node.To = append(node.To, child)
+	return child, true
+}
+
+func (g *Graph[K, T]) Walk(fn func(*Node[T])) {
+	seen := map[int]struct{}{}
+	for _, n := range g.Nodes {
+		if _, ok := seen[n.ID]; ok {
+			continue
+		}
+		seen[n.ID] = struct{}{}
+		fn(n)
+
+		if len(n.To) > 0 {
+			q := n.To[:]
+			for len(q) > 0 {
+				n, q = q[0], q[1:]
+				if _, ok := seen[n.ID]; ok {
+					continue
+				}
+				seen[n.ID] = struct{}{}
+				fn(n)
+				if len(n.To) > 0 {
+					q = append(q, n.To...)
+				}
+			}
+		}
+	}
 }
 
 type Node[T any] struct {

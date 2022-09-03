@@ -1,5 +1,7 @@
 package goinspect
 
+import "fmt"
+
 func NewGraph[K comparable, T any](keyFunc func(T) K, values ...T) *Graph[K, T] {
 	g := &Graph[K, T]{
 		KeyFunc: keyFunc,
@@ -78,10 +80,53 @@ func (g *Graph[K, T]) Walk(fn func(*Node[T])) {
 	}
 }
 
+func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
+	seen := map[int]struct{}{}
+	for _, n := range g.Nodes {
+		if _, ok := seen[n.ID]; ok {
+			continue
+		}
+		seen[n.ID] = struct{}{}
+
+		if len(n.To) == 0 {
+			fn([]*Node[T]{n})
+		} else {
+			q := make([][]*Node[T], 0, len(n.To))
+			for _, next := range n.To {
+				q = append(q, []*Node[T]{n, next})
+			}
+
+			var path []*Node[T]
+			for len(q) > 0 {
+				path, q = q[0], q[1:]
+				next := path[len(path)-1]
+				if _, ok := seen[next.ID]; ok {
+					continue
+				}
+				seen[next.ID] = struct{}{}
+
+				fn(path)
+				if len(next.To) > 0 {
+					nq := make([][]*Node[T], len(next.To))
+					for i, nextnext := range next.To {
+						nq[i] = append(path[:], nextnext)
+					}
+					q = append(nq, q...) // hack: stack like
+				}
+			}
+		}
+	}
+}
+
 type Node[T any] struct {
 	ID    int
+	Name  string
 	Value T
 
 	From []*Node[T]
 	To   []*Node[T]
+}
+
+func (n *Node[T]) String() string {
+	return fmt.Sprintf("N<%v>", n.Value)
 }

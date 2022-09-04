@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// https://mermaid-js.github.io/mermaid/#/flowchart?id=minimum-length-of-a-link
-	g := graph.StringGraph()
+	g := graph.Strings()
 	start := g.Madd("Start")
 	isIt := g.Madd("is it?")
 	isIt.Metadata.Shape = graph.ShapeRhombus
@@ -21,7 +21,7 @@ func main() {
 	g.LinkTo(ok, rethink)
 	g.LinkTo(rethink, isIt)
 
-		end := g.Madd("End")
+	end := g.Madd("End")
 	g.LinkTo(isIt, end)
 
 	graph.RenderMermaid(os.Stdout, g)

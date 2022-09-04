@@ -2,10 +2,10 @@ package graph
 
 import "fmt"
 
-func IntGraph(values ...int) *Graph[int, int] {
+func Ints(values ...int) *Graph[int, int] {
 	return New(func(v int) int { return v }, values...)
 }
-func StringGraph(values ...string) *Graph[string, string] {
+func Strings(values ...string) *Graph[string, string] {
 	return New(func(v string) string { return v }, values...)
 }
 

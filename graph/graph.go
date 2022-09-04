@@ -1,6 +1,9 @@
 package graph
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func Ints(values ...int) *Graph[int, int] {
 	return New(func(v int) int { return v }, values...)
@@ -72,6 +75,9 @@ type key struct {
 func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 	seen := map[key]struct{}{}
 	for _, n := range g.Nodes {
+		if len(n.From) > 0 {
+			continue
+		}
 		k := key{prev: n.ID}
 		if _, ok := seen[k]; ok {
 			continue
@@ -91,19 +97,22 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 				n, next := path[len(path)-2], path[len(path)-1]
 				k := key{prev: n.ID, next: next.ID}
 				if _, ok := seen[k]; ok {
+					// debugprint("SK", path)
 					continue
 				}
-				seen[k] = struct{}{}
 
 				{
 					k := key{prev: next.ID}
 					if _, ok := seen[k]; !ok {
-						fn([]*Node[T]{next})
 						seen[k] = struct{}{}
+						fn([]*Node[T]{next})
 					}
 				}
 
+				seen[k] = struct{}{}
+				// debugprint("<-", path)
 				fn(path)
+
 				if len(next.To) > 0 {
 					nq := make([][]*Node[T], len(next.To))
 					for i, nextnext := range next.To {
@@ -113,6 +122,16 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
 				}
 			}
 		}
+	}
+}
+
+func debugprint[T any](prefix string, path []*Node[T]) {
+	{
+		xs := make([]string, len(path))
+		for i, x := range path {
+			xs[i] = x.Name
+		}
+		fmt.Fprintf(os.Stderr, "\t\t\t\t## %s%v\n", prefix, xs)
 	}
 }
 

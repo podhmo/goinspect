@@ -65,6 +65,22 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 	node := s.g.Madd(subject)
 	node.Name = decl.Name.Name
 
+	if decl.Recv != nil {
+		if sig, ok := ob.Type().(*types.Signature); ok {
+			recv := sig.Recv()
+			recvType := recv.Type()
+			if t, ok := recvType.(*types.Pointer); ok {
+				recvType = t.Elem()
+			}
+			if named, ok := recvType.(*types.Named); ok {
+				typob := named.Obj()
+				parent := s.g.Madd(&Subject{ID: pkg.ID + "." + typob.Name(), Object: typob})
+				parent.Name = typob.Name()
+				s.g.LinkTo(parent, node)
+			}
+		}
+	}
+
 	ast.Inspect(decl.Body, func(t ast.Node) bool {
 		switch t := t.(type) {
 		case *ast.CallExpr:
@@ -72,7 +88,6 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 			case *ast.SelectorExpr:
 				// <x>.<sel>
 				// fmt.Println(sym, sym.X, sym.Sel)
-
 				switch x := sym.X.(type) {
 				case *ast.Ident:
 					if impath, ok := f.ImportPath(x.Name); ok {
@@ -86,14 +101,11 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 					}
 				}
 			case *ast.Ident:
-				if sym.Obj != nil {
-					id := sym.Obj.Decl.(*ast.FuncDecl).Name
-					if ob, ok := pkg.TypesInfo.Defs[id]; ok {
-						subject := &Subject{ID: pkg.ID + "." + id.Name, Object: ob}
-						child := s.g.Madd(subject)
-						child.Name = id.Name
-						s.g.LinkTo(node, child)
-					}
+				if ob, ok := pkg.TypesInfo.Uses[sym]; ok {
+					subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}
+					child := s.g.Madd(subject)
+					child.Name = sym.Name
+					s.g.LinkTo(node, child)
 				}
 			}
 		}

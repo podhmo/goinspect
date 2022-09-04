@@ -70,6 +70,5 @@ func parse(fset *token.FileSet, pkgpath string) error {
 			}
 		}
 	})
-
 	return nil
 }

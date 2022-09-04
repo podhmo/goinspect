@@ -60,7 +60,7 @@ func parse(fset *token.FileSet, pkgpath string) error {
 			node := path[0]
 			if len(node.From) == 0 && scanner.Need(node.Name) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
-				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
+				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]

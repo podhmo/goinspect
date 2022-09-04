@@ -31,7 +31,16 @@ func parse(fset *token.FileSet, pkgpath string) error {
 	}
 
 	g := graph.New(func(s *Subject) *ast.Ident { return s.ID })
-	scanner := &Scanner{g: g, IncludeUnexported: true}
+	pkgMap := make(map[string]*packages.Package, len(pkgs))
+	for _, pkg := range pkgs {
+		pkgMap[pkg.ID] = pkg
+	}
+	scanner := &Scanner{
+		g:      g,
+		pkgMap: pkgMap,
+	}
+	scanner.Config.IncludeUnexported = true
+
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
 			return pkg.Errors[0] // TODO: multierror
@@ -41,6 +50,7 @@ func parse(fset *token.FileSet, pkgpath string) error {
 				log.Printf("! %+v", err)
 			}
 		}
+		fmt.Println("**", pkg.ID)
 	}
 
 	fmt.Printf("package %s\n", pkgpath)

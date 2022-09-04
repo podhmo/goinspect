@@ -25,7 +25,7 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
 	}
-	pkgs, err := packages.Load(cfg, pkgpath)
+	pkgs, err := packages.Load(cfg, pkgpath, "github.com/podhmo/goinspect/internal/x/sub")
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,6 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		if len(pkg.Errors) > 0 {
 			return pkg.Errors[0] // TODO: multierror
 		}
-		fmt.Println(pkg)
 		for _, f := range pkg.Syntax {
 			if err := scanner.Scan(pkg, f); err != nil {
 				log.Printf("! %+v", err)
@@ -44,18 +43,21 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		}
 	}
 
+	fmt.Printf("package %s\n", pkgpath)
 	g.WalkPath(func(path []*Node) {
+		parts := strings.Split(pkgpath, "/")
+		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		if len(path) == 1 {
 			node := path[0]
 			if len(node.From) == 0 && scanner.Need(node.Value.ID.Name) {
-				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), pkgpath+".", "")
-				fmt.Println(strings.Repeat("  ", len(path)-1), name)
+				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
+				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
 			if scanner.Need(node.Value.ID.Name) {
-				name := strings.ReplaceAll(node.Value.Object.String(), pkgpath+".", "")
-				fmt.Println(strings.Repeat("  ", len(path)-1), name)
+				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		}
 	})

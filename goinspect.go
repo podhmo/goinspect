@@ -60,12 +60,18 @@ func (s *Scanner) Need(name string) bool {
 func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDecl) error {
 	// func <name>(...) ... { ... }
 
-	ob := pkg.TypesInfo.Defs[decl.Name]
-	subject := &Subject{ID: pkg.ID + "." + decl.Name.Name, Object: ob}
-	node := s.g.Madd(subject)
-	node.Name = decl.Name.Name
+	var node *Node
+	if decl.Recv == nil {
+		// function decl
+		ob := pkg.TypesInfo.Defs[decl.Name]
+		id := pkg.ID + "." + decl.Name.Name
+		subject := &Subject{ID: id, Object: ob}
+		node = s.g.Madd(subject)
+		node.Name = decl.Name.Name
 
-	if decl.Recv != nil {
+	} else {
+		// method decl
+		ob := pkg.TypesInfo.Defs[decl.Name]
 		if sig, ok := ob.Type().(*types.Signature); ok {
 			recv := sig.Recv()
 			recvType := recv.Type()
@@ -74,8 +80,14 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 			}
 			if named, ok := recvType.(*types.Named); ok {
 				typob := named.Obj()
-				parent := s.g.Madd(&Subject{ID: pkg.ID + "." + typob.Name(), Object: typob})
+				parentId := pkg.ID + "." + typob.Name()
+				parent := s.g.Madd(&Subject{ID: parentId, Object: typob})
 				parent.Name = typob.Name()
+
+				id := parentId + "#" + decl.Name.Name
+				subject := &Subject{ID: id, Object: ob}
+				node = s.g.Madd(subject)
+				node.Name = decl.Name.Name
 				s.g.LinkTo(parent, node)
 			}
 		}

@@ -87,20 +87,38 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 			switch sym := t.Fun.(type) {
 			case *ast.SelectorExpr:
 				// <x>.<sel>
-				// fmt.Println(sym, sym.X, sym.Sel)
-				switch x := sym.X.(type) {
-				case *ast.Ident:
-					if impath, ok := f.ImportPath(x.Name); ok {
-						if impkg, ok := s.pkgMap[impath]; ok {
-							ob := impkg.Types.Scope().Lookup(sym.Sel.Name)
-							subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name}
-							child := s.g.Madd(subject)
-							child.Name = sym.Sel.Name
-							s.g.LinkTo(node, child)
+				if selection, ok := pkg.TypesInfo.Selections[sym]; ok {
+					// invoke method <object>.<name>()
+					ob := selection.Obj()
+					recvType := selection.Recv()
+					if t, ok := recvType.(*types.Pointer); ok {
+						recvType = t.Elem()
+					}
+					if named, ok := recvType.(*types.Named); ok {
+						typob := named.Obj()
+						id := ob.Pkg().Path() + "." + typob.Name() + "#" + ob.Name()
+						subject := &Subject{Object: ob, ID: id}
+						child := s.g.Madd(subject)
+						child.Name = ob.Name()
+						s.g.LinkTo(node, child)
+					}
+				} else {
+					// invoke function <pkg>.<name>()
+					switch x := sym.X.(type) {
+					case *ast.Ident:
+						if impath, ok := f.ImportPath(x.Name); ok {
+							if impkg, ok := s.pkgMap[impath]; ok {
+								ob := impkg.Types.Scope().Lookup(sym.Sel.Name)
+								subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name}
+								child := s.g.Madd(subject)
+								child.Name = sym.Sel.Name
+								s.g.LinkTo(node, child)
+							}
 						}
 					}
 				}
 			case *ast.Ident:
+				// <name>()
 				if ob, ok := pkg.TypesInfo.Uses[sym]; ok {
 					if ob.Pkg() != nil { // skip stdlib
 						subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}

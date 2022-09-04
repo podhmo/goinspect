@@ -2,7 +2,10 @@ package x
 
 import "github.com/podhmo/goinspect/internal/x/sub"
 
-type S struct{}
+type S struct {
+	Name  string
+	Value int
+}
 
 func F(s S) {
 	defer log()()

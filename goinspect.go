@@ -38,8 +38,18 @@ func (s *Scanner) Scan(pkg *packages.Package, t *ast.File) error {
 			if err := s.scanFuncDecl(pkg, f, decl); err != nil {
 				return err
 			}
+		case *ast.GenDecl:
+			for _, spec := range decl.Specs {
+				switch spec := spec.(type) {
+				case *ast.TypeSpec:
+					if err := s.scanTypeSpec(pkg, f, spec); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -48,6 +58,8 @@ func (s *Scanner) Need(name string) bool {
 }
 
 func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDecl) error {
+	// func <name>(...) ... { ... }
+
 	ob := pkg.TypesInfo.Defs[decl.Name]
 	subject := &Subject{ID: pkg.ID + "." + decl.Name.Name, Object: ob}
 	node := s.g.Madd(subject)
@@ -87,6 +99,20 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 		}
 		return true
 	})
+	return nil
+}
+
+func (s *Scanner) scanTypeSpec(pkg *packages.Package, f *file, spec *ast.TypeSpec) error {
+	// type <name> = <type>
+	// type <name> <type>
+	// type <name> struct { ... }
+	// type <name> interface { ... }
+
+	ob := pkg.TypesInfo.Defs[spec.Name]
+	subject := &Subject{ID: pkg.ID + "." + spec.Name.Name, Object: ob}
+	node := s.g.Madd(subject)
+	node.Name = spec.Name.Name
+
 	return nil
 }
 

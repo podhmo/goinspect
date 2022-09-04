@@ -13,11 +13,11 @@ import (
 )
 
 type Subject struct {
-	ID     *ast.Ident
+	ID     string
 	Object types.Object
 }
 
-type Graph = graph.Graph[*ast.Ident, *Subject]
+type Graph = graph.Graph[string, *Subject]
 type Node = graph.Node[*Subject]
 
 type Scanner struct {
@@ -49,9 +49,9 @@ func (s *Scanner) Need(name string) bool {
 
 func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDecl) error {
 	ob := pkg.TypesInfo.Defs[decl.Name]
-	subject := &Subject{ID: decl.Name, Object: ob}
+	subject := &Subject{ID: pkg.ID + "." + decl.Name.Name, Object: ob}
 	node := s.g.Madd(subject)
-	node.Name = subject.ID.Name
+	node.Name = decl.Name.Name
 
 	ast.Inspect(decl.Body, func(t ast.Node) bool {
 		switch t := t.(type) {
@@ -66,16 +66,9 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 					if impath, ok := f.ImportPath(x.Name); ok {
 						if impkg, ok := s.pkgMap[impath]; ok {
 							ob := impkg.Types.Scope().Lookup(sym.Sel.Name)
-							var id *ast.Ident
-							for k := range impkg.TypesInfo.Defs {
-								if k.Name == sym.Sel.Name {
-									id = k
-									break
-								}
-							}
-							subject := &Subject{Object: ob, ID: id}
+							subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name}
 							child := s.g.Madd(subject)
-							child.Name = subject.ID.Name
+							child.Name = sym.Sel.Name
 							s.g.LinkTo(node, child)
 						}
 					}
@@ -84,9 +77,9 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				if sym.Obj != nil {
 					id := sym.Obj.Decl.(*ast.FuncDecl).Name
 					if ob, ok := pkg.TypesInfo.Defs[id]; ok {
-						subject := &Subject{ID: id, Object: ob}
+						subject := &Subject{ID: pkg.ID + "." + id.Name, Object: ob}
 						child := s.g.Madd(subject)
-						child.Name = subject.ID.Name
+						child.Name = id.Name
 						s.g.LinkTo(node, child)
 					}
 				}

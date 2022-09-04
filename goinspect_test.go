@@ -2,7 +2,6 @@ package goinspect
 
 import (
 	"fmt"
-	"go/ast"
 	"go/token"
 	"log"
 	"strings"
@@ -30,7 +29,7 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		return err
 	}
 
-	g := graph.New(func(s *Subject) *ast.Ident { return s.ID })
+	g := graph.New(func(s *Subject) string { return s.ID })
 	pkgMap := make(map[string]*packages.Package, len(pkgs))
 	for _, pkg := range pkgs {
 		pkgMap[pkg.ID] = pkg
@@ -59,13 +58,13 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		if len(path) == 1 {
 			node := path[0]
-			if len(node.From) == 0 && scanner.Need(node.Value.ID.Name) {
+			if len(node.From) == 0 && scanner.Need(node.Name) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
-			if scanner.Need(node.Value.ID.Name) {
+			if scanner.Need(node.Name) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}

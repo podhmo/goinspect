@@ -102,10 +102,12 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				}
 			case *ast.Ident:
 				if ob, ok := pkg.TypesInfo.Uses[sym]; ok {
-					subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}
-					child := s.g.Madd(subject)
-					child.Name = sym.Name
-					s.g.LinkTo(node, child)
+					if ob.Pkg() != nil { // skip stdlib
+						subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}
+						child := s.g.Madd(subject)
+						child.Name = sym.Name
+						s.g.LinkTo(node, child)
+					}
 				}
 			}
 		}

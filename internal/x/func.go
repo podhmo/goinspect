@@ -1,6 +1,10 @@
 package x
 
-func F() {
+import "github.com/podhmo/goinspect/internal/x/sub"
+
+type S struct{}
+
+func F(s S) {
 	defer log()()
 	F0()
 	H()
@@ -19,6 +23,7 @@ func F1() {
 func G() {
 	defer log()()
 	G0()
+	sub.X()
 }
 
 func G0() {

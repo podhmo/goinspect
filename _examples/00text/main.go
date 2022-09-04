@@ -9,14 +9,20 @@ import (
 func main() {
 	// https://mermaid-js.github.io/mermaid/#/flowchart?id=minimum-length-of-a-link
 	g := graph.StringGraph()
-	start, _ := g.Add("Start")
-	isIt, _ := g.LinkTo(start, "Is it?")
+	start := g.Madd("Start")
+	isIt := g.Madd("is it?")
 	isIt.Metadata.Shape = graph.ShapeRhombus
-	ok, _ := g.LinkTo(isIt, "OK")
-	rethink, _ := g.LinkTo(ok, "Rethink")
-	g.LinkTo(rethink, "Is it?")
+	g.LinkTo(start, isIt)
 
-	g.LinkTo(isIt, "End")
+	ok := g.Madd("OK")
+	g.LinkTo(isIt, ok)
+
+	rethink := g.Madd("Rethink")
+	g.LinkTo(ok, rethink)
+	g.LinkTo(rethink, isIt)
+
+		end := g.Madd("End")
+	g.LinkTo(isIt, end)
 
 	graph.RenderMermaid(os.Stdout, g)
 }

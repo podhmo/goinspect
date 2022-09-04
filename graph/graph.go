@@ -42,48 +42,25 @@ func (g *Graph[K, T]) Add(v T) (node *Node[T], added bool) {
 	return node, true
 }
 
-func (g *Graph[K, T]) LinkTo(node *Node[T], v T) (child *Node[T], added bool) {
-	k := g.KeyFunc(v)
-	child, ok := g.seen[k]
-	if !ok {
-		g.c++
-		child = &Node[T]{ID: g.c, Value: v}
-		g.seen[k] = child
-	}
+func (g *Graph[K, T]) Madd(v T) *Node[T] {
+	node, _ := g.Add(v)
+	return node
+}
 
-	for _, x := range node.To {
-		if x.ID == child.ID {
-			return child, false
+func (g *Graph[K, T]) LinkTo(prev *Node[T], node *Node[T]) (added bool) {
+	for _, x := range prev.To {
+		if x.ID == node.ID {
+			return false
 		}
 	}
-	node.To = append(node.To, child)
-	child.From = append(child.From, node)
-	return child, true
+	prev.To = append(prev.To, node)
+	node.From = append(node.From, prev)
+	return true
 }
 
 func (g *Graph[K, T]) Walk(fn func(*Node[T])) {
-	seen := map[int]struct{}{}
 	for _, n := range g.Nodes {
-		if _, ok := seen[n.ID]; ok {
-			continue
-		}
-		seen[n.ID] = struct{}{}
 		fn(n)
-
-		if len(n.To) > 0 {
-			q := n.To[:]
-			for len(q) > 0 {
-				n, q = q[0], q[1:]
-				if _, ok := seen[n.ID]; ok {
-					continue
-				}
-				seen[n.ID] = struct{}{}
-				fn(n)
-				if len(n.To) > 0 {
-					q = append(q, n.To...)
-				}
-			}
-		}
 	}
 }
 

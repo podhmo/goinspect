@@ -18,20 +18,26 @@ func TestRenderText(t *testing.T) {
 		{msg: "link1", want: "1;\n2;\n1 -> 2;\n3;\n2 -> 3;",
 			g: func() *Graph[int, int] {
 				g := IntGraph()
-				n1, _ := g.Add(1)
-				n2, _ := g.LinkTo(n1, 2)
-				g.LinkTo(n2, 3)
+				n1 := g.Madd(1)
+				n2 := g.Madd(2)
+				g.LinkTo(n1, n2)
+				n3 := g.Madd(3)
+				g.LinkTo(n2, n3)
 				return g
 			}(),
 		},
 		{msg: "link2", want: "1;\n2;\n1 -> 2;\n3;\n2 -> 3;\n4;\n2 -> 4;\n5;\n1 -> 5;",
 			g: func() *Graph[int, int] {
 				g := IntGraph()
-				n1, _ := g.Add(1)
-				n2, _ := g.LinkTo(n1, 2)
-				g.LinkTo(n2, 3)
-				g.LinkTo(n2, 4)
-				g.LinkTo(n1, 5)
+				n1 := g.Madd(1)
+				n2 := g.Madd(2)
+				g.LinkTo(n1, n2)
+				n3 := g.Madd(3)
+				g.LinkTo(n2, n3)
+				n4 := g.Madd(4)
+				g.LinkTo(n2, n4)
+				n5 := g.Madd(5)
+				g.LinkTo(n1, n5)
 				return g
 			}(),
 		},
@@ -39,13 +45,16 @@ func TestRenderText(t *testing.T) {
 			g: func() *Graph[int, int] {
 				g := IntGraph()
 
-				n1, _ := g.Add(1)
-				g.LinkTo(n1, 3)
-				g.LinkTo(n1, 4)
+				n1 := g.Madd(1)
+				n2 := g.Madd(2)
+				n3 := g.Madd(3)
+				n4 := g.Madd(4)
 
-				n2, _ := g.Add(2)
-				g.LinkTo(n2, 3)
-				g.LinkTo(n2, 4)
+				g.LinkTo(n1, n3)
+				g.LinkTo(n1, n4)
+
+				g.LinkTo(n2, n3)
+				g.LinkTo(n2, n4)
 				return g
 			}(),
 		},

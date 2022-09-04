@@ -25,12 +25,15 @@ func TestGraphWalk(t *testing.T) {
 
 				// 2 -> 3 -> 4
 				n2, _ := g.Add(2)
-				n3, _ := g.LinkTo(n2, 3)
-				g.LinkTo(n3, 4)
+				n3, _ := g.Add(3)
+				g.LinkTo(n2, n3)
+				n4, _ := g.Add(4)
+				g.LinkTo(n3, n4)
 
 				// 5 -> 6
 				n5, _ := g.Add(5)
-				g.LinkTo(n5, 6)
+				n6, _ := g.Add(6)
+				g.LinkTo(n5, n6)
 				return g
 			}(),
 		},

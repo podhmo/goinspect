@@ -93,20 +93,24 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				// <x>.<sel>
 				if selection, ok := pkg.TypesInfo.Selections[sym]; ok {
 					// invoke method <object>.<name>()
-					ob := selection.Obj()
+					fn := selection.Obj()
 					recvType := selection.Recv()
 					if t, ok := recvType.(*types.Pointer); ok {
 						recvType = t.Elem()
 					}
 					if named, ok := recvType.(*types.Named); ok {
-						typob := named.Obj()
-						id := typob.Name() + "#" + ob.Name()
-						if p := ob.Pkg(); p != nil { // p is nil when e.g. error.Error()
-							id = ob.Pkg().Path() + "." + id
+						p := fn.Pkg()
+						if p == nil {
+							return false
 						}
-						subject := &Subject{Object: ob, ID: id}
+						path := p.Path()
+						if _, ok := s.pkgMap[path]; !ok {
+							return false
+						}
+						id := path + "." + named.Obj().Name() + "#" + fn.Name()
+						subject := &Subject{Object: fn, ID: id}
 						child := s.g.Madd(subject)
-						child.Name = ob.Name()
+						child.Name = fn.Name()
 						s.g.LinkTo(node, child)
 					}
 				} else {

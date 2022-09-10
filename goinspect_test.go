@@ -14,19 +14,25 @@ import (
 func TestParse(t *testing.T) {
 	fset := token.NewFileSet()
 	pkg := "github.com/podhmo/goinspect/internal/x"
-	if err := parse(fset, pkg); err != nil {
+
+	result, err := Scan(fset, pkg)
+	if err != nil {
+		t.Errorf("unexpected error: %+v", err)
+	}
+
+	if err := Emit(result); err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 }
 
-func parse(fset *token.FileSet, pkgpath string) error {
+func Scan(fset *token.FileSet, pkgpath string) (*Result, error) {
 	cfg := &packages.Config{
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
 	}
 	pkgs, err := packages.Load(cfg, pkgpath, "github.com/podhmo/goinspect/internal/x/sub")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	g := graph.New(func(s *Subject) string { return s.ID })
@@ -42,7 +48,7 @@ func parse(fset *token.FileSet, pkgpath string) error {
 
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
-			return pkg.Errors[0] // TODO: multierror
+			return nil, pkg.Errors[0] // TODO: multierror
 		}
 		for _, f := range pkg.Syntax {
 			if err := scanner.Scan(pkg, f); err != nil {
@@ -51,6 +57,19 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		}
 		fmt.Println("**", pkg.ID)
 	}
+	return &Result{Graph: g, scanner: scanner, PkgPath: pkgpath}, nil
+}
+
+type Result struct {
+	PkgPath string
+	Graph   *Graph
+
+	scanner *Scanner
+}
+
+func Emit(r *Result) error {
+	pkgpath := r.PkgPath
+	g := r.Graph
 
 	fmt.Printf("package %s\n", pkgpath)
 	g.WalkPath(func(path []*Node) {
@@ -58,13 +77,13 @@ func parse(fset *token.FileSet, pkgpath string) error {
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		if len(path) == 1 {
 			node := path[0]
-			if len(node.From) == 0 && scanner.Need(node.Name) {
+			if len(node.From) == 0 && r.scanner.Need(node.Name) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
 				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
-			if scanner.Need(node.Name) {
+			if r.scanner.Need(node.Name) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}

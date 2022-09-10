@@ -11,7 +11,7 @@ func TestParse(t *testing.T) {
 	cfg := &Config{
 		Fset:    fset,
 		PkgPath: pkg,
-		MorePkgs: []string{
+		OtherPackages: []string{
 			"github.com/podhmo/goinspect/internal/x/sub",
 		},
 
@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("unexpected error: %+v", err)
 	}
 
-	if err := Emit(result); err != nil {
+	if err := Dump(result); err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 }

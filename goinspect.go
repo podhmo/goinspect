@@ -13,11 +13,10 @@ import (
 type Config struct {
 	Fset *token.FileSet
 
-	PkgPath  string
-	MorePkgs []string
+	PkgPath string
 
 	IncludeUnexported bool
-	// IncludeOtherPackage bool
+	OtherPackages     []string
 }
 
 func Scan(c *Config) (*ScanResult, error) {
@@ -27,7 +26,7 @@ func Scan(c *Config) (*ScanResult, error) {
 
 	fset := c.Fset
 	pkgpath := c.PkgPath
-	includes := c.MorePkgs
+	includes := c.OtherPackages
 
 	cfg := &packages.Config{
 		Fset: fset,
@@ -69,7 +68,7 @@ type ScanResult struct {
 	scanner *Scanner
 }
 
-func Emit(r *ScanResult) error {
+func Dump(r *ScanResult) error {
 	pkgpath := r.PkgPath
 	g := r.Graph
 

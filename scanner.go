@@ -12,13 +12,13 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type Graph = graph.Graph[string, *Subject]
+type Node = graph.Node[*Subject]
+
 type Subject struct {
 	ID     string
 	Object types.Object
 }
-
-type Graph = graph.Graph[string, *Subject]
-type Node = graph.Node[*Subject]
 
 type Scanner struct {
 	g      *Graph

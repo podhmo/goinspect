@@ -7,6 +7,7 @@ import (
 
 	"github.com/podhmo/flagstruct"
 	"github.com/podhmo/goinspect"
+	"golang.org/x/tools/go/packages"
 )
 
 type Options struct {
@@ -29,20 +30,29 @@ func run(options Options) error {
 	pkg := options.Pkg
 	fset := token.NewFileSet()
 
-	cfg := &goinspect.Config{
+	c := &goinspect.Config{
 		Fset:              fset,
 		PkgPath:           pkg,
 		OtherPackages:     options.Other,
 		IncludeUnexported: options.IncludeUnexported,
 	}
 
-	g, err := goinspect.Scan(cfg)
+	cfg := &packages.Config{
+		Fset: fset,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
+	}
+	pkgs, err := packages.Load(cfg, append([]string{c.PkgPath}, c.OtherPackages...)...)
+	if err != nil {
+		return fmt.Errorf("load packages: %w", err)
+	}
+
+	g, err := goinspect.Scan(c, pkgs)
 	if err != nil {
 		return fmt.Errorf("scan: %w", err)
 	}
 
 	if len(options.Only) == 0 {
-		if err := goinspect.DumpAll(cfg, g); err != nil {
+		if err := goinspect.DumpAll(c, g); err != nil {
 			return fmt.Errorf("dump: %w", err)
 		}
 	}
@@ -56,7 +66,7 @@ func run(options Options) error {
 			}
 		}
 	})
-	if err := goinspect.Dump(cfg, g, nodes); err != nil {
+	if err := goinspect.Dump(c, g, nodes); err != nil {
 		return fmt.Errorf("dump: %w", err)
 	}
 	return nil

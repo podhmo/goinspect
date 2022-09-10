@@ -23,22 +23,9 @@ func (c *Config) Need(name string) bool {
 	return c.IncludeUnexported || token.IsExported(name)
 }
 
-func Scan(c *Config) (*Graph, error) {
+func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 	if c.Fset == nil {
 		c.Fset = token.NewFileSet()
-	}
-
-	fset := c.Fset
-	pkgpath := c.PkgPath
-	includes := c.OtherPackages
-
-	cfg := &packages.Config{
-		Fset: fset,
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
-	}
-	pkgs, err := packages.Load(cfg, append([]string{pkgpath}, includes...)...)
-	if err != nil {
-		return nil, err
 	}
 
 	g := graph.New(func(s *Subject) string { return s.ID })

@@ -2,14 +2,15 @@ package goinspect
 
 import (
 	"go/token"
-	"strings"
 	"testing"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func TestParse(t *testing.T) {
 	pkg := "github.com/podhmo/goinspect/internal/x"
 	fset := token.NewFileSet()
-	cfg := &Config{
+	c := &Config{
 		Fset:    fset,
 		PkgPath: pkg,
 		OtherPackages: []string{
@@ -19,18 +20,20 @@ func TestParse(t *testing.T) {
 		IncludeUnexported: true,
 	}
 
-	g, err := Scan(cfg)
+	cfg := &packages.Config{
+		Fset: fset,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
+	}
+	pkgs, err := packages.Load(cfg, append([]string{c.PkgPath}, c.OtherPackages...)...)
 	if err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 
-	var nodes []*Node
-	g.Walk(func(n *Node) {
-		if strings.HasPrefix(n.Name, "F") {
-			nodes = append(nodes, n)
-		}
-	})
-	if err := Dump(cfg, g, nodes); err != nil {
+	g, err := Scan(c, pkgs)
+	if err != nil {
+		t.Errorf("unexpected error: %+v", err)
+	}
+	if err := DumpAll(c, g); err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 }

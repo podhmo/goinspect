@@ -19,7 +19,11 @@ type Config struct {
 	OtherPackages     []string
 }
 
-func Scan(c *Config) (*ScanResult, error) {
+func (c *Config) Need(name string) bool {
+	return c.IncludeUnexported || token.IsExported(name)
+}
+
+func Scan(c *Config) (*Graph, error) {
 	if c.Fset == nil {
 		c.Fset = token.NewFileSet()
 	}
@@ -58,19 +62,11 @@ func Scan(c *Config) (*ScanResult, error) {
 			}
 		}
 	}
-	return &ScanResult{Graph: g, scanner: scanner, PkgPath: pkgpath}, nil
+	return g, nil
 }
 
-type ScanResult struct {
-	PkgPath string
-	Graph   *Graph
-
-	scanner *Scanner
-}
-
-func Dump(r *ScanResult) error {
-	pkgpath := r.PkgPath
-	g := r.Graph
+func DumpAll(c *Config, g *Graph) error {
+	pkgpath := c.PkgPath
 
 	fmt.Printf("package %s\n", pkgpath)
 	g.WalkPath(func(path []*Node) {
@@ -78,13 +74,13 @@ func Dump(r *ScanResult) error {
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		if len(path) == 1 {
 			node := path[0]
-			if len(node.From) == 0 && r.scanner.Need(node.Name) {
+			if len(node.From) == 0 && c.Need(node.Name) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
 				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
-			if r.scanner.Need(node.Name) {
+			if c.Need(node.Name) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}

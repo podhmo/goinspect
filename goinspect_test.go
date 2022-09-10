@@ -18,12 +18,12 @@ func TestParse(t *testing.T) {
 		IncludeUnexported: true,
 	}
 
-	result, err := Scan(cfg)
+	g, err := Scan(cfg)
 	if err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 
-	if err := Dump(result); err != nil {
+	if err := DumpAll(cfg, g); err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 }

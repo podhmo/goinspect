@@ -2,7 +2,6 @@ package goinspect
 
 import (
 	"go/ast"
-	"go/token"
 	"go/types"
 	"strconv"
 	"strings"
@@ -48,10 +47,6 @@ func (s *Scanner) Scan(pkg *packages.Package, t *ast.File) error {
 	}
 
 	return nil
-}
-
-func (s *Scanner) Need(name string) bool {
-	return s.Config.IncludeUnexported || token.IsExported(name)
 }
 
 func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDecl) error {

@@ -28,14 +28,18 @@ func main() {
 }
 
 func run(options Options) error {
-	pkg := options.Pkg
 	fset := token.NewFileSet()
 
 	c := &goinspect.Config{
 		Fset:              fset,
-		PkgPath:           pkg,
+		PkgPath:           options.Pkg,
 		OtherPackages:     options.Other,
 		IncludeUnexported: options.IncludeUnexported,
+	}
+
+	if strings.HasSuffix(c.PkgPath, "...") {
+		c.OtherPackages = append(c.OtherPackages, c.PkgPath)
+		c.PkgPath = strings.TrimRight(c.PkgPath, "./")
 	}
 
 	cfg := &packages.Config{
@@ -47,8 +51,8 @@ func run(options Options) error {
 		return fmt.Errorf("load packages: %w", err)
 	}
 
-	if strings.HasPrefix(pkg, "./") {
-		suffix := strings.TrimRight(strings.TrimLeft(pkg, "."), "/")
+	if strings.HasPrefix(c.PkgPath, "./") {
+		suffix := strings.TrimRight(strings.TrimLeft(c.PkgPath, "."), "/")
 		for _, pkg := range pkgs {
 			if strings.HasSuffix(pkg.PkgPath, suffix) {
 				c.PkgPath = pkg.PkgPath // to fullpath

@@ -17,6 +17,7 @@ type Node = graph.Node[*Subject]
 type Subject struct {
 	ID     string
 	Object types.Object
+	Recv   string // if method, this value is not zero
 }
 
 type Scanner struct {
@@ -77,7 +78,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				parent.Name = typob.Name()
 
 				id := parentId + "#" + decl.Name.Name
-				subject := &Subject{ID: id, Object: ob}
+				subject := &Subject{ID: id, Object: ob, Recv: typob.Name()}
 				node = s.g.Madd(subject)
 				node.Name = decl.Name.Name
 				s.g.LinkTo(parent, node)
@@ -108,7 +109,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 							return false
 						}
 						id := path + "." + named.Obj().Name() + "#" + fn.Name()
-						subject := &Subject{Object: fn, ID: id}
+						subject := &Subject{Object: fn, ID: id, Recv: named.Obj().Name()}
 						child := s.g.Madd(subject)
 						child.Name = fn.Name()
 						s.g.LinkTo(node, child)

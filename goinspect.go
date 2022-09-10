@@ -65,13 +65,13 @@ func Dump(c *Config, g *Graph, nodes []*Node) error {
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		if len(path) == 1 {
 			node := path[0]
-			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) {
+			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
 				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
-			if c.NeedName(node.Name) {
+			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}

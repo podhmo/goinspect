@@ -1,187 +1,95 @@
 package goinspect
 
 import (
-	"go/ast"
+	"fmt"
 	"go/token"
-	"go/types"
-	"strconv"
+	"log"
 	"strings"
-	"sync"
 
 	"github.com/podhmo/goinspect/graph"
 	"golang.org/x/tools/go/packages"
 )
 
-type Subject struct {
-	ID     string
-	Object types.Object
+type Config struct {
+	Fset *token.FileSet
+
+	PkgPath  string
+	MorePkgs []string
+
+	IncludeUnexported bool
+	// IncludeOtherPackage bool
 }
 
-type Graph = graph.Graph[string, *Subject]
-type Node = graph.Node[*Subject]
-
-type Scanner struct {
-	g      *Graph
-	pkgMap map[string]*packages.Package
-
-	Config struct {
-		IncludeUnexported bool
-		// IncludeOtherPackage bool
+func Scan(c *Config) (*ScanResult, error) {
+	if c.Fset == nil {
+		c.Fset = token.NewFileSet()
 	}
-}
 
-func (s *Scanner) Scan(pkg *packages.Package, t *ast.File) error {
-	f := &file{t: t}
-	for _, decl := range t.Decls {
-		switch decl := decl.(type) {
-		case *ast.FuncDecl:
-			if err := s.scanFuncDecl(pkg, f, decl); err != nil {
-				return err
-			}
-		case *ast.GenDecl:
-			for _, spec := range decl.Specs {
-				switch spec := spec.(type) {
-				case *ast.TypeSpec:
-					if err := s.scanTypeSpec(pkg, f, spec); err != nil {
-						return err
-					}
-				}
+	fset := c.Fset
+	pkgpath := c.PkgPath
+	includes := c.MorePkgs
+
+	cfg := &packages.Config{
+		Fset: fset,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
+	}
+	pkgs, err := packages.Load(cfg, append([]string{pkgpath}, includes...)...)
+	if err != nil {
+		return nil, err
+	}
+
+	g := graph.New(func(s *Subject) string { return s.ID })
+	pkgMap := make(map[string]*packages.Package, len(pkgs))
+	for _, pkg := range pkgs {
+		pkgMap[pkg.ID] = pkg
+	}
+	scanner := &Scanner{
+		g:      g,
+		pkgMap: pkgMap,
+		Config: c,
+	}
+
+	for _, pkg := range pkgs {
+		if len(pkg.Errors) > 0 {
+			return nil, pkg.Errors[0] // TODO: multierror
+		}
+		for _, f := range pkg.Syntax {
+			if err := scanner.Scan(pkg, f); err != nil {
+				log.Printf("! %+v", err)
 			}
 		}
 	}
-
-	return nil
+	return &ScanResult{Graph: g, scanner: scanner, PkgPath: pkgpath}, nil
 }
 
-func (s *Scanner) Need(name string) bool {
-	return s.Config.IncludeUnexported || token.IsExported(name)
+type ScanResult struct {
+	PkgPath string
+	Graph   *Graph
+
+	scanner *Scanner
 }
 
-func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDecl) error {
-	// func <name>(...) ... { ... }
+func Emit(r *ScanResult) error {
+	pkgpath := r.PkgPath
+	g := r.Graph
 
-	var node *Node
-	if decl.Recv == nil {
-		// function decl
-		ob := pkg.TypesInfo.Defs[decl.Name]
-		id := pkg.ID + "." + decl.Name.Name
-		subject := &Subject{ID: id, Object: ob}
-		node = s.g.Madd(subject)
-		node.Name = decl.Name.Name
-
-	} else {
-		// method decl
-		ob := pkg.TypesInfo.Defs[decl.Name]
-		if sig, ok := ob.Type().(*types.Signature); ok {
-			recv := sig.Recv()
-			recvType := recv.Type()
-			if t, ok := recvType.(*types.Pointer); ok {
-				recvType = t.Elem()
+	fmt.Printf("package %s\n", pkgpath)
+	g.WalkPath(func(path []*Node) {
+		parts := strings.Split(pkgpath, "/")
+		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
+		if len(path) == 1 {
+			node := path[0]
+			if len(node.From) == 0 && r.scanner.Need(node.Name) {
+				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
+				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
-			if named, ok := recvType.(*types.Named); ok {
-				typob := named.Obj()
-				parentId := pkg.ID + "." + typob.Name()
-				parent := s.g.Madd(&Subject{ID: parentId, Object: typob})
-				parent.Name = typob.Name()
-
-				id := parentId + "#" + decl.Name.Name
-				subject := &Subject{ID: id, Object: ob}
-				node = s.g.Madd(subject)
-				node.Name = decl.Name.Name
-				s.g.LinkTo(parent, node)
+		} else {
+			node := path[len(path)-1]
+			if r.scanner.Need(node.Name) {
+				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		}
-	}
-
-	ast.Inspect(decl.Body, func(t ast.Node) bool {
-		switch t := t.(type) {
-		case *ast.CallExpr:
-			switch sym := t.Fun.(type) {
-			case *ast.SelectorExpr:
-				// <x>.<sel>
-				if selection, ok := pkg.TypesInfo.Selections[sym]; ok {
-					// invoke method <object>.<name>()
-					ob := selection.Obj()
-					recvType := selection.Recv()
-					if t, ok := recvType.(*types.Pointer); ok {
-						recvType = t.Elem()
-					}
-					if named, ok := recvType.(*types.Named); ok {
-						typob := named.Obj()
-						id := ob.Pkg().Path() + "." + typob.Name() + "#" + ob.Name()
-						subject := &Subject{Object: ob, ID: id}
-						child := s.g.Madd(subject)
-						child.Name = ob.Name()
-						s.g.LinkTo(node, child)
-					}
-				} else {
-					// invoke function <pkg>.<name>()
-					switch x := sym.X.(type) {
-					case *ast.Ident:
-						if impath, ok := f.ImportPath(x.Name); ok {
-							if impkg, ok := s.pkgMap[impath]; ok {
-								ob := impkg.Types.Scope().Lookup(sym.Sel.Name)
-								subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name}
-								child := s.g.Madd(subject)
-								child.Name = sym.Sel.Name
-								s.g.LinkTo(node, child)
-							}
-						}
-					}
-				}
-			case *ast.Ident:
-				// <name>()
-				if ob, ok := pkg.TypesInfo.Uses[sym]; ok {
-					if ob.Pkg() != nil { // skip stdlib
-						subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}
-						child := s.g.Madd(subject)
-						child.Name = sym.Name
-						s.g.LinkTo(node, child)
-					}
-				}
-			}
-		}
-		return true
 	})
 	return nil
-}
-
-func (s *Scanner) scanTypeSpec(pkg *packages.Package, f *file, spec *ast.TypeSpec) error {
-	// type <name> = <type>
-	// type <name> <type>
-	// type <name> struct { ... }
-	// type <name> interface { ... }
-
-	ob := pkg.TypesInfo.Defs[spec.Name]
-	subject := &Subject{ID: pkg.ID + "." + spec.Name.Name, Object: ob}
-	node := s.g.Madd(subject)
-	node.Name = spec.Name.Name
-
-	return nil
-}
-
-type file struct {
-	t       *ast.File
-	imports map[string]string // name -> path
-	sync.Once
-}
-
-func (f *file) ImportPath(name string) (string, bool) {
-	f.Once.Do(func() {
-		imports := make(map[string]string, len(f.t.Imports))
-		for _, im := range f.t.Imports {
-			path, _ := strconv.Unquote(im.Path.Value)
-			name := ""
-			if im.Name != nil {
-				name = im.Name.Name
-			} else {
-				parts := strings.Split(path, "/") // TODO: this has bug (e.g. go-sqlite)
-				name = parts[len(parts)-1]
-			}
-			imports[name] = path
-		}
-		f.imports = imports
-	})
-	path, ok := f.imports[name]
-	return path, ok
 }

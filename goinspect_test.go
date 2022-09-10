@@ -1,13 +1,16 @@
 package goinspect
 
 import (
+	"bytes"
 	"go/token"
+	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/tools/go/packages"
 )
 
-func TestParse(t *testing.T) {
+func TestIT(t *testing.T) {
 	pkg := "github.com/podhmo/goinspect/internal/x"
 	fset := token.NewFileSet()
 	c := &Config{
@@ -16,8 +19,9 @@ func TestParse(t *testing.T) {
 		OtherPackages: []string{
 			"github.com/podhmo/goinspect/internal/x/sub",
 		},
-
+		Padding:           "@",
 		IncludeUnexported: true,
+		skipHeader:        true,
 	}
 
 	cfg := &packages.Config{
@@ -33,7 +37,54 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
-	if err := DumpAll(c, g); err != nil {
-		t.Errorf("unexpected error: %+v", err)
+
+	testcases := []struct {
+		msg   string
+		want  string
+		names []string
+	}{
+		{
+			msg: "F", names: []string{"F"},
+			want: `
+@func x.F(s x.S)
+@@func x.log() func()
+@@func x.F0()
+@@@func x.log() func()
+@@@func x.F1()
+@@@@func x.H()
+@@func x.H()`,
+		},
+		{
+			msg: "G", names: []string{"G"},
+			want: `
+@func x.G()
+@@func x.log() func()
+@@func x.G0()
+@@@func x.log() func()
+@@@func x.H()
+@@func x/sub.X()`,
+			},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.msg, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			var nodes []*Node
+			g.Walk(func(n *Node) {
+				for _, name := range tc.names {
+					if name == n.Name {
+						nodes = append(nodes, n)
+					}
+				}
+			})
+
+			if err := Dump(buf, c, g, nodes); err != nil {
+				t.Errorf("unexpected error: %+v", err)
+			}
+
+			if diff := cmp.Diff(strings.TrimSpace(tc.want), strings.TrimSpace(buf.String())); diff != "" {
+				t.Errorf("Scan() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 	"log"
+	"strings"
 
 	"github.com/podhmo/flagstruct"
 	"github.com/podhmo/goinspect"
@@ -44,6 +45,16 @@ func run(options Options) error {
 	pkgs, err := packages.Load(cfg, append([]string{c.PkgPath}, c.OtherPackages...)...)
 	if err != nil {
 		return fmt.Errorf("load packages: %w", err)
+	}
+
+	if strings.HasPrefix(pkg, "./") {
+		suffix := strings.TrimRight(strings.TrimLeft(pkg, "."), "/")
+		for _, pkg := range pkgs {
+			if strings.HasSuffix(pkg.PkgPath, suffix) {
+				c.PkgPath = pkg.PkgPath // to fullpath
+				break
+			}
+		}
 	}
 
 	g, err := goinspect.Scan(c, pkgs)

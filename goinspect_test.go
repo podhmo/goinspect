@@ -2,6 +2,7 @@ package goinspect
 
 import (
 	"go/token"
+	"strings"
 	"testing"
 )
 
@@ -23,7 +24,13 @@ func TestParse(t *testing.T) {
 		t.Errorf("unexpected error: %+v", err)
 	}
 
-	if err := DumpAll(cfg, g); err != nil {
+	var nodes []*Node
+	g.Walk(func(n *Node) {
+		if strings.HasPrefix(n.Name, "F") {
+			nodes = append(nodes, n)
+		}
+	})
+	if err := Dump(cfg, g, nodes); err != nil {
 		t.Errorf("unexpected error: %+v", err)
 	}
 }

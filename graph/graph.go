@@ -72,9 +72,13 @@ type key struct {
 	next int
 }
 
-func (g *Graph[K, T]) WalkPath(fn func([]*Node[T])) {
+func (g *Graph[K, T]) WalkPath(fn func([]*Node[T]), nodes []*Node[T]) {
+	if nodes == nil {
+		nodes = g.Nodes
+	}
+
 	seen := map[key]struct{}{}
-	for _, n := range g.Nodes {
+	for _, n := range nodes {
 		if len(n.From) > 0 {
 			continue
 		}

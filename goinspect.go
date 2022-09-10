@@ -66,6 +66,10 @@ func Scan(c *Config) (*Graph, error) {
 }
 
 func DumpAll(c *Config, g *Graph) error {
+	return Dump(c, g, g.Nodes)
+}
+
+func Dump(c *Config, g *Graph, nodes []*Node) error {
 	pkgpath := c.PkgPath
 
 	fmt.Printf("package %s\n", pkgpath)
@@ -85,6 +89,6 @@ func DumpAll(c *Config, g *Graph) error {
 				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
 			}
 		}
-	})
+	}, nodes)
 	return nil
 }

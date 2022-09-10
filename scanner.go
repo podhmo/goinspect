@@ -100,7 +100,10 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 					}
 					if named, ok := recvType.(*types.Named); ok {
 						typob := named.Obj()
-						id := ob.Pkg().Path() + "." + typob.Name() + "#" + ob.Name()
+						id := typob.Name() + "#" + ob.Name()
+						if p := ob.Pkg(); p != nil { // p is nil when e.g. error.Error()
+							id = ob.Pkg().Path() + "." + id
+						}
 						subject := &Subject{Object: ob, ID: id}
 						child := s.g.Madd(subject)
 						child.Name = ob.Name()

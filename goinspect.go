@@ -64,7 +64,7 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	pkgpath := c.PkgPath
 
 	rows := make([]*row, 0, len(nodes))
-	seen := map[int][]*row{}
+	sameIDRows := map[int][]*row{}
 
 	g.WalkPath(func(path []*Node) {
 		parts := strings.Split(pkgpath, "/")
@@ -76,14 +76,14 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
 				row := &row{indent: len(path), text: name, id: node.ID, hasChildren: len(node.To) > 0, isToplevel: true}
 				rows = append(rows, row)
-				seen[node.ID] = append(seen[node.ID], row)
+				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 			}
 		} else {
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				row := &row{indent: len(path), text: name, id: node.ID, hasChildren: len(node.To) > 0}
 				rows = append(rows, row)
-				seen[node.ID] = append(seen[node.ID], row)
+				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 			}
 		}
 	}, nodes)
@@ -92,12 +92,18 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 		fmt.Fprintf(w, "package %s\n", pkgpath)
 	}
 
+	seen := make(map[int]int, len(sameIDRows))
 	for _, row := range rows {
 		if row.isToplevel {
 			fmt.Fprintln(w, "")
 		}
-		if showID := len(seen[row.id]) > 1 && row.hasChildren; showID {
-			fmt.Fprintf(w, "%s%s #=%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+		if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
+			if seen[row.id] == 0 {
+				fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+			} else {
+				fmt.Fprintf(w, "%s%s // *%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+			}
+			seen[row.id]++
 		} else {
 			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 		}

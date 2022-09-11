@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/podhmo/flagstruct"
@@ -35,6 +36,7 @@ func run(options Options) error {
 		PkgPath:           options.Pkg,
 		OtherPackages:     options.Other,
 		IncludeUnexported: options.IncludeUnexported,
+		Padding:           "  ",
 	}
 
 	if strings.HasSuffix(c.PkgPath, "...") {
@@ -67,7 +69,7 @@ func run(options Options) error {
 	}
 
 	if len(options.Only) == 0 {
-		if err := goinspect.DumpAll(c, g); err != nil {
+		if err := goinspect.DumpAll(os.Stdout, c, g); err != nil {
 			return fmt.Errorf("dump: %w", err)
 		}
 	}
@@ -81,7 +83,7 @@ func run(options Options) error {
 			}
 		}
 	})
-	if err := goinspect.Dump(c, g, nodes); err != nil {
+	if err := goinspect.Dump(os.Stdout, c, g, nodes); err != nil {
 		return fmt.Errorf("dump: %w", err)
 	}
 	return nil

@@ -3,6 +3,7 @@ package goinspect
 import (
 	"fmt"
 	"go/token"
+	"io"
 	"log"
 	"strings"
 
@@ -14,9 +15,12 @@ type Config struct {
 	Fset *token.FileSet
 
 	PkgPath string
+	Padding string
 
 	IncludeUnexported bool
 	OtherPackages     []string
+
+	skipHeader bool
 }
 
 func (c *Config) NeedName(name string) bool {
@@ -52,14 +56,16 @@ func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 	return g, nil
 }
 
-func DumpAll(c *Config, g *Graph) error {
-	return Dump(c, g, g.Nodes)
+func DumpAll(w io.Writer, c *Config, g *Graph) error {
+	return Dump(w, c, g, g.Nodes)
 }
 
-func Dump(c *Config, g *Graph, nodes []*Node) error {
+func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	pkgpath := c.PkgPath
-
-	fmt.Printf("package %s\n", pkgpath)
+	if !c.skipHeader {
+		fmt.Fprintf(w, "package %s\n", pkgpath)
+	}
+	
 	g.WalkPath(func(path []*Node) {
 		parts := strings.Split(pkgpath, "/")
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
@@ -67,13 +73,13 @@ func Dump(c *Config, g *Graph, nodes []*Node) error {
 			node := path[0]
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")
-				fmt.Printf("\n%s%s\n", strings.Repeat("  ", len(path)), name)
+				fmt.Fprintf(w, "\n%s%s\n", strings.Repeat(c.Padding, len(path)), name)
 			}
 		} else {
 			node := path[len(path)-1]
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
-				fmt.Printf("%s%s\n", strings.Repeat("  ", len(path)), name)
+				fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, len(path)), name)
 			}
 		}
 	}, nodes)

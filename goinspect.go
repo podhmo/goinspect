@@ -17,6 +17,7 @@ type Config struct {
 	PkgPath string
 	Padding string
 
+	ExpandAll         bool
 	IncludeUnexported bool
 	OtherPackages     []string
 
@@ -62,10 +63,10 @@ func DumpAll(w io.Writer, c *Config, g *Graph) error {
 
 func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	pkgpath := c.PkgPath
+	expand := c.ExpandAll
 
 	rows := make([]*row, 0, len(nodes))
 	sameIDRows := map[int][]*row{}
-	expand := true
 
 	g.WalkPath(func(path []*Node) {
 		parts := strings.Split(pkgpath, "/")

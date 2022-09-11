@@ -13,10 +13,12 @@ import (
 )
 
 type Options struct {
-	IncludeUnexported bool     `flag:"include-unexported"`
-	Pkg               string   `flag:"pkg" required:"true"`
-	Other             []string `flag:"other"`
-	Only              []string `flag:"only"`
+	IncludeUnexported bool `flag:"include-unexported"`
+	ExpandAll         bool `flag:"expand-all"`
+
+	Pkg   string   `flag:"pkg" required:"true"`
+	Other []string `flag:"other"`
+	Only  []string `flag:"only"`
 }
 
 func main() {
@@ -32,11 +34,13 @@ func run(options Options) error {
 	fset := token.NewFileSet()
 
 	c := &goinspect.Config{
-		Fset:              fset,
-		PkgPath:           options.Pkg,
-		OtherPackages:     options.Other,
-		IncludeUnexported: options.IncludeUnexported,
+		Fset:          fset,
+		PkgPath:       options.Pkg,
+		OtherPackages: options.Other,
+
 		Padding:           "  ",
+		IncludeUnexported: options.IncludeUnexported,
+		ExpandAll:         options.ExpandAll,
 	}
 
 	if strings.HasSuffix(c.PkgPath, "...") {

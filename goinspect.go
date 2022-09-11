@@ -65,6 +65,7 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 
 	rows := make([]*row, 0, len(nodes))
 	sameIDRows := map[int][]*row{}
+	expand := true
 
 	g.WalkPath(func(path []*Node) {
 		parts := strings.Split(pkgpath, "/")
@@ -92,22 +93,51 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 		fmt.Fprintf(w, "package %s\n", pkgpath)
 	}
 
-	seen := make(map[int]int, len(sameIDRows))
-	for _, row := range rows {
-		if row.isToplevel {
-			fmt.Fprintln(w, "")
-		}
-		if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
-			if seen[row.id] == 0 {
-				fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
-			} else {
-				fmt.Fprintf(w, "%s%s // *%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+	seen := make(map[int][]int, len(sameIDRows))
+	if expand {
+		for i, row := range rows {
+			if row.isToplevel {
+				fmt.Fprintln(w, "")
 			}
-			seen[row.id]++
-		} else {
-			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
-		}
 
+			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
+				if len(seen[row.id]) == 0 {
+					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
+				} else {
+					idx := seen[row.id][0]
+					st := rows[idx]
+					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), st.text)
+					for _, x := range rows[idx+1:] {
+						if x.indent <= st.indent {
+							break
+						}
+						fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, x.indent-st.indent+row.indent), x.text)
+					}
+				}
+				seen[row.id] = append(seen[row.id], i)
+			} else {
+				fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
+			}
+
+		}
+	} else {
+		for i, row := range rows {
+			if row.isToplevel {
+				fmt.Fprintln(w, "")
+			}
+
+			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
+				if len(seen[row.id]) == 0 {
+					fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+				} else {
+					fmt.Fprintf(w, "%s%s // *%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+				}
+				seen[row.id] = append(seen[row.id], i)
+			} else {
+				fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
+			}
+
+		}
 	}
 	return nil
 }

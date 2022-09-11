@@ -112,7 +112,7 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 						if x.indent <= st.indent {
 							break
 						}
-						fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, x.indent-st.indent+row.indent), x.text)
+						fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent+(x.indent-st.indent)), x.text)
 					}
 				}
 				seen[row.id] = append(seen[row.id], i)

@@ -1,0 +1,31 @@
+package github.com/podhmo/goinspect/internal/x
+
+  func x.F(s x.S)
+    func x.F0() // &5
+      func x.F1()
+        func x.H()
+    func x.H()
+
+  func x.G()
+    func x.G0() // &9
+      func x.H()
+    func x/sub.X()
+
+  type x.W struct{}
+    func (*x.W).Method(s x.S)
+      func x.G0() // *9
+    func (*x.W).MethodWithCompoliteLiteral(s x.S)
+      func (x.W0).M0() // &13
+        func x.G0() // *9
+      func (*x.W0).M1() // &14
+        func x.F0() // *5
+    func (*x.W).MethodWithMethodInvoke(s x.S)
+      func (*x.W0).M1() // *14
+    func (*x.W).MethodWithFactoryFunction(s x.S)
+      func (*x.W0).M1() // *14
+      func x.NewW0() *x.W0
+    func (x.W).String() string
+
+  type x.W0 struct{}
+    func (x.W0).M0() // *13
+    func (*x.W0).M1() // *14

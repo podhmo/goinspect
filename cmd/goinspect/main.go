@@ -77,6 +77,7 @@ func run(options Options) error {
 		if err := goinspect.DumpAll(os.Stdout, c, g); err != nil {
 			return fmt.Errorf("dump: %w", err)
 		}
+		return nil
 	}
 
 	var nodes []*goinspect.Node

@@ -1,0 +1,19 @@
+package github.com/podhmo/goinspect/internal/x
+
+  type x.W0 struct{}
+    func (x.W0).M0()
+      func x.G0()
+        func x.H()
+          func x.H()
+
+  type x.W struct{}
+      func x.G0()
+        func x.H()
+          func x.H()
+    func (*x.W).MethodWithCompoliteLiteral(s x.S)
+      func (x.W0).M0()
+        func x.G0()
+          func x.H()
+            func x.H()
+          func x.H()
+            func x.H()

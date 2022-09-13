@@ -12,5 +12,3 @@ package github.com/podhmo/goinspect/internal/x
         func x.G0()
           func x.H()
             func x.H()
-          func x.H()
-            func x.H()

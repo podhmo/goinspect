@@ -7,7 +7,6 @@ package github.com/podhmo/goinspect/internal/x
     func x.H()
 
   type x.W0 struct{}
-        func x.H()
     func (*x.W0).M1()
       func x.F0()
         func x.F1()

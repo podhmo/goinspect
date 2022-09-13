@@ -252,5 +252,5 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 			return fullpkgpath, nil
 		}
 	}
-	return "", fmt.Errorf("pkg path is not found: %q", pkgpath)
+	return "", fmt.Errorf("pkg is not found, %q", pkgpath)
 }

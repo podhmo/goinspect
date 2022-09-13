@@ -57,7 +57,8 @@ func run(options Options) error {
 		return fmt.Errorf("load packages: %w", err)
 	}
 
-	if strings.HasPrefix(c.PkgPath, "./") {
+	// TODO: support e.g. ../../....
+	if strings.HasPrefix(c.PkgPath, ".") {
 		suffix := strings.TrimRight(strings.TrimLeft(c.PkgPath, "."), "/")
 		for _, pkg := range pkgs {
 			if strings.HasSuffix(pkg.PkgPath, suffix) {

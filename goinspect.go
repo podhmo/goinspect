@@ -96,6 +96,23 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 
 	seen := make(map[int][]int, len(sameIDRows))
 	if expand {
+		var dumpCache func(*row, int)
+		dumpCache = func(row *row, indent int) {
+			idx := seen[row.id][0]
+			st := rows[idx]
+			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent), st.text)
+			for _, x := range rows[idx+1:] {
+				if x.indent <= st.indent {
+					break
+				}
+				if showID := len(sameIDRows[x.id]) > 1 && x.hasChildren; showID {
+					dumpCache(x, indent+1)
+				} else {
+					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
+				}
+			}
+		}
+
 		for i, row := range rows {
 			if row.isToplevel {
 				fmt.Fprintln(w, "")
@@ -105,15 +122,7 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 				if len(seen[row.id]) == 0 {
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else {
-					idx := seen[row.id][0]
-					st := rows[idx]
-					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), st.text)
-					for _, x := range rows[idx+1:] {
-						if x.indent <= st.indent {
-							break
-						}
-						fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent+(x.indent-st.indent)), x.text)
-					}
+					dumpCache(row, row.indent)
 				}
 				seen[row.id] = append(seen[row.id], i)
 			} else {

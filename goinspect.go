@@ -128,10 +128,9 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
 			}
+		} else if filter != nil && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
+			return
 		} else {
-			if filter != nil && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
-				return
-			}
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				row := &row{indent: indent, text: name, id: node.ID, hasChildren: len(node.To) > 0}

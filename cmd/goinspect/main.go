@@ -198,6 +198,8 @@ func modInfo(goMod string) ([]mod, error) {
 }
 
 func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Package, debug bool) (string, error) {
+	pkgpath = strings.TrimSuffix(pkgpath, "/")
+
 	var prefix, suffix string
 	parts := strings.Split(pkgpath, "/")
 	for i, x := range parts {

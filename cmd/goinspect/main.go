@@ -82,10 +82,19 @@ func run(options Options) error {
 
 	var nodes []*goinspect.Node
 	g.Walk(func(n *goinspect.Node) {
-		for _, name := range options.Only {
-			if name == n.Name {
-				nodes = append(nodes, n)
-				break
+		if n.Value.Recv == "" {
+			for _, fullname := range options.Only {
+				if fullname == n.Name {
+					nodes = append(nodes, n)
+					break
+				}
+			}
+		} else {
+			for _, fullname := range options.Only {
+				if fullname == n.Value.Recv+"."+n.Name {
+					nodes = append(nodes, n)
+					break
+				}
 			}
 		}
 	})

@@ -219,7 +219,7 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 	// prefix :: ..
 	// suffix :: xxx/yyy
 	if debug {
-		log.Printf("* modInfo: %v", modInfo)
+		log.Printf("* modInfo: %+v", modInfo)
 		log.Printf("* cwd: %v", cwd)
 		log.Printf("* prefix: %v", prefix)
 		log.Printf("* suffix: %v", suffix)
@@ -248,11 +248,11 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 	fullpkgpath := strings.Join(xs, "/")
 
 	if debug {
-		log.Printf("* fullpkgpath: %v", fullpkgpath)
+		log.Printf("* pkgpath: %v", fullpkgpath)
 	}
 	for _, pkg := range pkgs {
 		if debug {
-			log.Printf("\t* pkg check %v: pkgpath == %v", pkg.PkgPath == fullpkgpath, pkg.PkgPath)
+			log.Printf("\t* pkg check %5v: pkgpath == %v", pkg.PkgPath == fullpkgpath, pkg.PkgPath)
 		}
 		if pkg.PkgPath == fullpkgpath {
 			return fullpkgpath, nil

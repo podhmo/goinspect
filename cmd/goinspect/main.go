@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/podhmo/flagstruct"
@@ -21,6 +22,7 @@ type Options struct {
 	IncludeUnexported bool `flag:"include-unexported"`
 	ExpandAll         bool `flag:"expand-all"`
 	Short             bool `flag:"short"`
+	Debug             bool `flag:"debug"`
 
 	Pkg   string   `flag:"pkg" required:"true"`
 	Other []string `flag:"other"`
@@ -53,12 +55,6 @@ func run(options Options) error {
 		c.PkgPath = strings.TrimRight(c.PkgPath, "./")
 	}
 
-	if options.Short {
-		if mods, err := modInfo(); err == nil && len(mods) > 0 {
-			c.TrimPrefix = mods[0].Path
-		}
-	}
-
 	cfg := &packages.Config{
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
@@ -68,13 +64,37 @@ func run(options Options) error {
 		return fmt.Errorf("load packages: %w", err)
 	}
 
-	// TODO: support e.g. ../../....
-	if strings.HasPrefix(c.PkgPath, ".") {
-		suffix := strings.TrimRight(strings.TrimLeft(c.PkgPath, "."), "/")
-		for _, pkg := range pkgs {
-			if strings.HasSuffix(pkg.PkgPath, suffix) {
-				c.PkgPath = pkg.PkgPath // to fullpath
-				break
+	{
+		goMod, err := goMod()
+		if err != nil {
+			log.Println("go mod failed, %w", err)
+		}
+
+		mods, err := modInfo(goMod)
+		if err == nil && len(mods) > 0 {
+			modInfo := mods[0]
+			// handling --short
+			if options.Short {
+				c.TrimPrefix = modInfo.Path
+			}
+
+			// detect fullpath from relative path
+			if strings.HasPrefix(c.PkgPath, ".") {
+				if err := func() error {
+					cwd, err := os.Getwd()
+					if err != nil {
+						return fmt.Errorf("getwd: %w", err)
+					}
+					pkgpath, err := fullPkgPath(c.PkgPath, cwd, modInfo, pkgs, options.Debug)
+					if err != nil {
+						return err
+					}
+					log.Printf("detect package path, %q -> %q", c.PkgPath, pkgpath)
+					c.PkgPath = pkgpath
+					return nil
+				}(); err != nil {
+					return fmt.Errorf("detect package path is failed: %w", err)
+				}
 			}
 		}
 	}
@@ -146,14 +166,14 @@ type mod struct {
 	Dir  string // Directory holding files for this module, if any.
 }
 
-// buildList determines the build list in the current directory
+// modInfo determines the go mod info in the current directory
 // by invoking the go command. It should only be used in module mode,
 // when vendor mode isn't on.
 //
 // See https://golang.org/cmd/go/#hdr-The_main_module_and_the_build_list.
-func modInfo() ([]mod, error) {
-	_, err := goMod()
-	if err != nil {
+func modInfo(goMod string) ([]mod, error) {
+	if goMod == os.DevNull {
+		// Empty build list.
 		return nil, nil
 	}
 
@@ -175,4 +195,68 @@ func modInfo() ([]mod, error) {
 		mods = append(mods, m)
 	}
 	return mods, nil
+}
+
+func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Package, debug bool) (string, error) {
+	var prefix, suffix string
+	parts := strings.Split(pkgpath, "/")
+	for i, x := range parts {
+		switch x {
+		case ".":
+			continue
+		case "..":
+			prefix += "../"
+		default:
+			suffix = strings.Join(parts[i-1:], "/")
+		}
+	}
+
+	// e.g.
+	// modInfo.Dir :: ~/go/github.com/<user>/<name>
+	// modInfo.Path :: /github.com/<user>/<name>
+	// pkgpath :: ../xxx/yyy
+	// cwd :: ~/go/github.com/<user>/<name>/foo/bar
+	// prefix :: ..
+	// suffix :: xxx/yyy
+	if debug {
+		log.Printf("* modInfo: %v", modInfo)
+		log.Printf("* cwd: %v", cwd)
+		log.Printf("* prefix: %v", prefix)
+		log.Printf("* suffix: %v", suffix)
+	}
+
+	// pkgpath is github.com/<user>/<name>/foo/xxx/yyy
+	abspath, err := filepath.Abs(filepath.Join(cwd, prefix))
+	if err != nil {
+		return "", fmt.Errorf("abspath: %w", err)
+	}
+	rel, err := filepath.Rel(modInfo.Dir, abspath)
+	if err != nil {
+		return "", fmt.Errorf("rel: %w", err)
+	}
+	if debug {
+		log.Printf("* rel: %v", rel)
+	}
+
+	xs := make([]string, 0, 3)
+	for _, x := range []string{modInfo.Path, rel, suffix} {
+		if x == "." || x == "" {
+			continue
+		}
+		xs = append(xs, strings.TrimSuffix(strings.TrimPrefix(x, "/"), "/"))
+	}
+	fullpkgpath := strings.Join(xs, "/")
+
+	if debug {
+		log.Printf("* fullpkgpath: %v", fullpkgpath)
+	}
+	for _, pkg := range pkgs {
+		if debug {
+			log.Printf("\t* pkg check %v: pkgpath == %v", pkg.PkgPath == fullpkgpath, pkg.PkgPath)
+		}
+		if pkg.PkgPath == fullpkgpath {
+			return fullpkgpath, nil
+		}
+	}
+	return "", fmt.Errorf("pkg is not found, %q", pkgpath)
 }

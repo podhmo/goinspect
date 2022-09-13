@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/token"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/podhmo/goinspect/graph"
@@ -45,15 +44,24 @@ func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 		Config: c,
 	}
 
+	matched := false
 	for _, pkg := range pkgs {
+		if pkg.PkgPath != c.PkgPath {
+			continue
+		}
+
+		matched = true
 		if len(pkg.Errors) > 0 {
 			return nil, pkg.Errors[0] // TODO: multierror
 		}
 		for _, f := range pkg.Syntax {
 			if err := scanner.Scan(pkg, f); err != nil {
-				log.Printf("! %+v", err)
+				return nil, err
 			}
 		}
+	}
+	if !matched {
+		return nil, fmt.Errorf("pkg is not found, %q", c.PkgPath)
 	}
 	return g, nil
 }

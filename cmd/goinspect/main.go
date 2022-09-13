@@ -237,10 +237,16 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 	if debug {
 		log.Printf("* rel: %v", rel)
 	}
-	fullpkgpath := strings.TrimSuffix(modInfo.Path, "/") + "/" + strings.TrimSuffix(strings.TrimPrefix(rel, "/"), "/") + "/" + strings.TrimPrefix(suffix, "/")
-	if rel == "." {
-		fullpkgpath = strings.TrimSuffix(modInfo.Path, "/") + "/" + strings.TrimPrefix(suffix, "/")
+
+	xs := make([]string, 0, 3)
+	for _, x := range []string{modInfo.Path, rel, suffix} {
+		if x == "." || x == "" {
+			continue
+		}
+		xs = append(xs, strings.TrimSuffix(strings.TrimPrefix(x, "/"), "/"))
 	}
+	fullpkgpath := strings.Join(xs, "/")
+
 	if debug {
 		log.Printf("* fullpkgpath: %v", fullpkgpath)
 	}

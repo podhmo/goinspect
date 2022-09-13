@@ -58,10 +58,50 @@ func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 }
 
 func DumpAll(w io.Writer, c *Config, g *Graph) error {
-	return Dump(w, c, g, g.Nodes)
+	return dump(w, c, g, g.Nodes, nil)
 }
 
 func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
+	selected := make([]*Node, 0, len(nodes))
+	seen := make(map[int]struct{}, len(g.Nodes))
+
+	{
+		q := make([]*Node, 0, len(nodes))
+		for _, n := range nodes {
+			if len(n.To) > 0 {
+				q = append(q, n.To...)
+			}
+		}
+		var n *Node
+		for len(q) > 0 {
+			n, q = q[0], q[1:]
+			seen[n.ID] = struct{}{}
+			if len(n.To) > 0 {
+				q = append(q, n.To[:]...)
+			}
+		}
+	}
+
+	{
+		q := nodes[:]
+		var n *Node
+		for len(q) > 0 {
+			n, q = q[0], q[1:]
+			if _, ok := seen[n.ID]; ok {
+				continue
+			}
+			seen[n.ID] = struct{}{}
+			if len(n.From) == 0 {
+				selected = append(selected, n)
+			} else {
+				q = append(q, n.From[:]...)
+			}
+		}
+	}
+	return dump(w, c, g, selected, seen)
+}
+
+func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct{}) error {
 	pkgpath := c.PkgPath
 	expand := c.ExpandAll
 
@@ -69,10 +109,16 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	sameIDRows := map[int][]*row{}
 
 	g.WalkPath(func(path []*Node) {
+		node := path[len(path)-1]
+		if filter != nil {
+			if _, ok := filter[node.ID]; !ok {
+				return
+			}
+		}
+
 		parts := strings.Split(pkgpath, "/")
 		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 
-		node := path[len(path)-1]
 		if len(path) == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(path[len(path)-1].Value.Object.String(), prefix, "")

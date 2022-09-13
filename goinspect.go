@@ -14,8 +14,9 @@ import (
 type Config struct {
 	Fset *token.FileSet
 
-	PkgPath string
-	Padding string
+	PkgPath    string
+	Padding    string
+	TrimPrefix string
 
 	ExpandAll         bool
 	IncludeUnexported bool
@@ -108,6 +109,9 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	rows := make([]*row, 0, len(nodes))
 	sameIDRows := map[int][]*row{}
 
+	parts := strings.Split(pkgpath, "/")
+	prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
+
 	prevIndent := 0
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
@@ -117,12 +121,14 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			}
 		}
 
-		parts := strings.Split(pkgpath, "/")
-		prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 		indent := len(path)
 		if indent == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
+				if c.TrimPrefix != "" {
+					name = strings.ReplaceAll(name, c.TrimPrefix, "")
+				}
+
 				row := &row{indent: indent, text: name, id: node.ID, hasChildren: len(node.To) > 0, isToplevel: true}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
@@ -133,6 +139,10 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		} else {
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+				if c.TrimPrefix != "" {
+					name = strings.ReplaceAll(name, c.TrimPrefix, "")
+				}
+
 				row := &row{indent: indent, text: name, id: node.ID, hasChildren: len(node.To) > 0}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)

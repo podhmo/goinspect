@@ -50,3 +50,17 @@ package github.com/podhmo/goinspect/internal/x
         func x.F1()
           func x.H()
       func (*x.W0).Inner()
+
+  func x.RecRoot(n int)
+    func x.R(n int) int
+      func x.H()
+      func x.R(n int) int
+        func x.H()
+    func x.Odd(n int) bool
+      func x.H()
+      func x.Even(n int) bool
+        func x.H()
+        func x.Odd(n int) bool
+          func x.H()
+          func x.Even(n int) bool
+            func x.H()

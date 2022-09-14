@@ -32,3 +32,13 @@ package github.com/podhmo/goinspect/internal/x
     func (x.W0).M0() // *13
     func (*x.W0).M1() // *14
     func (*x.W0).Inner()
+
+  func x.RecRoot(n int)
+    func x.R(n int) int // &21
+      func x.H()
+      func x.R(n int) int // *21
+    func x.Odd(n int) bool // &22
+      func x.H()
+      func x.Even(n int) bool
+        func x.H()
+        func x.Odd(n int) bool // *22

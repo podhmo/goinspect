@@ -143,12 +143,13 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		indent := len(path)
 		if indent == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
+
 				name := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
 					name = strings.ReplaceAll(name, c.TrimPrefix, "")
 				}
 
-				row := &row{indent: indent, text: name, id: node.ID, hasChildren: len(node.To) > 0, isToplevel: true}
+				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isToplevel: true}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
@@ -162,7 +163,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					name = strings.ReplaceAll(name, c.TrimPrefix, "")
 				}
 
-				row := &row{indent: indent, text: name, id: node.ID, hasChildren: len(node.To) > 0}
+				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
@@ -176,37 +177,51 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 	seen := make(map[int][]int, len(sameIDRows))
 	if expand {
-		var dumpCache func(*row, int)
-		dumpCache = func(row *row, indent int) {
+		var dumpCache func(*row, int, int)
+		dumpCache = func(row *row, indent int, i int) {
 			idx := seen[row.id][0]
 			st := rows[idx]
 			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent), st.text)
+			seen[row.id] = append(seen[row.id], i)
 			for _, x := range rows[idx+1:] {
 				if x.indent <= st.indent {
 					break
 				}
 				if showID := len(sameIDRows[x.id]) > 1 && x.hasChildren; showID {
-					dumpCache(x, indent+1)
+					dumpCache(x, indent+1, i)
 				} else {
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
+					seen[x.id] = append(seen[x.id], i)
 				}
 			}
 		}
 
+		scopeID := 0
+		var scopeKind Kind
 		for i, row := range rows {
 			if row.isToplevel {
 				fmt.Fprintln(w, "")
+				scopeID = i
+				scopeKind = row.kind
+			}
+
+			if row.indent == 2 && scopeKind == KindObject { // skip used method declaration
+				hist, ok := seen[row.id]
+				if ok && scopeID < hist[len(hist)-1] {
+					continue
+				}
 			}
 
 			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
 				if len(seen[row.id]) == 0 {
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else {
-					dumpCache(row, row.indent)
+					dumpCache(row, row.indent, i)
 				}
 				seen[row.id] = append(seen[row.id], i)
 			} else {
 				fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
+				seen[row.id] = append(seen[row.id], i)
 			}
 
 		}
@@ -233,9 +248,11 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 }
 
 type row struct {
-	indent      int
-	text        string
-	id          int
+	indent int
+	text   string
+	id     int
+
+	kind        Kind
 	hasChildren bool
 	isToplevel  bool
 }

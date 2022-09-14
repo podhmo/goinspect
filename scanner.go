@@ -18,7 +18,16 @@ type Subject struct {
 	ID     string
 	Object types.Object
 	Recv   string // if method, this value is not zero
+	Kind   Kind
 }
+
+type Kind string
+
+const (
+	KindFunc   Kind = "F"
+	KindObject Kind = "O"
+	KindMethod Kind = "M"
+)
 
 type Scanner struct {
 	g      *Graph
@@ -58,7 +67,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 		// function decl
 		ob := pkg.TypesInfo.Defs[decl.Name]
 		id := pkg.ID + "." + decl.Name.Name
-		subject := &Subject{ID: id, Object: ob}
+		subject := &Subject{ID: id, Object: ob, Kind: KindFunc}
 		node = s.g.Madd(subject)
 		node.Name = decl.Name.Name
 
@@ -74,11 +83,11 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 			if named, ok := recvType.(*types.Named); ok {
 				typob := named.Obj()
 				parentId := pkg.ID + "." + typob.Name()
-				parent := s.g.Madd(&Subject{ID: parentId, Object: typob})
+				parent := s.g.Madd(&Subject{ID: parentId, Object: typob, Kind: KindObject})
 				parent.Name = typob.Name()
 
 				id := parentId + "#" + decl.Name.Name
-				subject := &Subject{ID: id, Object: ob, Recv: typob.Name()}
+				subject := &Subject{ID: id, Object: ob, Recv: typob.Name(), Kind: KindMethod}
 				node = s.g.Madd(subject)
 				node.Name = decl.Name.Name
 				s.g.LinkTo(parent, node)
@@ -109,7 +118,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 							return false
 						}
 						id := path + "." + named.Obj().Name() + "#" + fn.Name()
-						subject := &Subject{Object: fn, ID: id, Recv: named.Obj().Name()}
+						subject := &Subject{Object: fn, ID: id, Recv: named.Obj().Name(), Kind: KindMethod}
 						child := s.g.Madd(subject)
 						child.Name = fn.Name()
 						s.g.LinkTo(node, child)
@@ -121,7 +130,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 						if impath, ok := f.ImportPath(x.Name); ok {
 							if impkg, ok := s.pkgMap[impath]; ok {
 								ob := impkg.Types.Scope().Lookup(sym.Sel.Name)
-								subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name}
+								subject := &Subject{Object: ob, ID: impkg.ID + "." + sym.Sel.Name, Kind: KindFunc}
 								child := s.g.Madd(subject)
 								child.Name = sym.Sel.Name
 								s.g.LinkTo(node, child)
@@ -133,7 +142,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				// <name>()
 				if ob, ok := pkg.TypesInfo.Uses[sym]; ok {
 					if ob.Pkg() != nil { // skip stdlib
-						subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob}
+						subject := &Subject{ID: pkg.ID + "." + sym.Name, Object: ob, Kind: KindFunc}
 						child := s.g.Madd(subject)
 						child.Name = sym.Name
 						s.g.LinkTo(node, child)
@@ -153,7 +162,7 @@ func (s *Scanner) scanTypeSpec(pkg *packages.Package, f *file, spec *ast.TypeSpe
 	// type <name> interface { ... }
 
 	ob := pkg.TypesInfo.Defs[spec.Name]
-	subject := &Subject{ID: pkg.ID + "." + spec.Name.Name, Object: ob}
+	subject := &Subject{ID: pkg.ID + "." + spec.Name.Name, Object: ob, Kind: KindObject}
 	node := s.g.Madd(subject)
 	node.Name = spec.Name.Name
 

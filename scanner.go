@@ -67,7 +67,7 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 		// function decl
 		ob := pkg.TypesInfo.Defs[decl.Name]
 		id := pkg.ID + "." + decl.Name.Name
-		subject := &Subject{ID: id, Object: ob, Kind: KindObject}
+		subject := &Subject{ID: id, Object: ob, Kind: KindFunc}
 		node = s.g.Madd(subject)
 		node.Name = decl.Name.Name
 

@@ -142,11 +142,6 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	prevIndent := 0
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
-		if filter != nil {
-			if _, ok := filter[node.ID]; !ok {
-				return
-			}
-		}
 
 		indent := len(path)
 		if indent == 1 {
@@ -164,6 +159,17 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		} else if (filter != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
 			return
 		} else {
+			if filter != nil {
+				if _, ok := filter[node.ID]; !ok {
+					return
+				}
+				for _, x := range path[:len(path)-1] {
+					if _, ok := filter[x.ID]; !ok {
+						return
+					}
+				}
+			}
+
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {

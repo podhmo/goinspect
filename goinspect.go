@@ -86,23 +86,6 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	seen := make(map[int]struct{}, len(g.Nodes))
 
 	{
-		q := make([]*Node, 0, len(nodes))
-		for _, n := range nodes {
-			if len(n.To) > 0 {
-				q = append(q, n.To...)
-			}
-		}
-		var n *Node
-		for len(q) > 0 {
-			n, q = q[0], q[1:]
-			seen[n.ID] = struct{}{}
-			if len(n.To) > 0 {
-				q = append(q, n.To[:]...)
-			}
-		}
-	}
-
-	{
 		q := nodes[:]
 		var n *Node
 		for len(q) > 0 {
@@ -114,10 +97,35 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 			if len(n.From) == 0 {
 				selected = append(selected, n)
 			} else {
-				q = append(q, n.From[:]...)
+				copied := make([]*Node, len(n.From))
+				copy(copied, n.From)
+				q = append(q, copied...)
 			}
 		}
 	}
+
+	{
+		q := make([]*Node, 0, len(nodes))
+		for _, n := range nodes {
+			if len(n.To) > 0 {
+				q = append(q, n.To...)
+			}
+		}
+		var n *Node
+		for len(q) > 0 {
+			n, q = q[0], q[1:]
+			if _, ok := seen[n.ID]; ok {
+				continue
+			}
+			seen[n.ID] = struct{}{}
+			if len(n.To) > 0 {
+				copied := make([]*Node, len(n.To))
+				copy(copied, n.To)
+				q = append(q, copied...)
+			}
+		}
+	}
+
 	return dump(w, c, g, selected, seen)
 }
 

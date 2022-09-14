@@ -120,7 +120,10 @@ func (g *Graph[K, T]) WalkPath(fn func([]*Node[T]), nodes []*Node[T]) {
 				if len(next.To) > 0 {
 					nq := make([][]*Node[T], len(next.To))
 					for i, nextnext := range next.To {
-						nq[i] = append(path[:], nextnext)
+						copied := make([]*Node[T], len(path)+1)
+						copy(copied, path)
+						copied[len(copied)-1] = nextnext
+						nq[i] = copied
 					}
 					q = append(nq, q...) // hack: stack like
 				}

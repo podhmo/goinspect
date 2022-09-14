@@ -207,11 +207,6 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					break
 				}
 				if showID := len(sameIDRows[x.id]) > 1 && x.hasChildren; showID {
-					for _, j := range seen[x.id] {
-						if i == j {
-							return
-						}
-					}
 					dumpCache(x, indent+1, i)
 				} else {
 					seen[x.id] = append(seen[x.id], i)
@@ -242,7 +237,11 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else {
 					seen[row.id] = append(seen[row.id], i)
-					dumpCache(row, row.indent, i)
+					if row.isRecursive {
+						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, row.indent), row.text)
+					} else {
+						dumpCache(row, row.indent, i)
+					}
 				}
 			} else {
 				seen[row.id] = append(seen[row.id], i)
@@ -258,6 +257,8 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
 				if len(seen[row.id]) == 0 {
 					fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
+				} else if row.isRecursive {
+					fmt.Fprintf(w, "%s%s // *%d recursion\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
 				} else {
 					fmt.Fprintf(w, "%s%s // *%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
 				}

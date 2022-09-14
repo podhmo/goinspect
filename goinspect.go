@@ -21,16 +21,20 @@ type Config struct {
 	IncludeUnexported bool
 	OtherPackages     []string
 
-	skipHeader bool
+	skipHeader      bool
+	forceIncludeMap map[string]bool
 }
 
 func (c *Config) NeedName(name string) bool {
-	return c.IncludeUnexported || token.IsExported(name)
+	return c.IncludeUnexported || token.IsExported(name) || c.forceIncludeMap[name]
 }
 
 func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 	if c.Fset == nil {
 		c.Fset = token.NewFileSet()
+	}
+	if c.forceIncludeMap == nil {
+		c.forceIncludeMap = map[string]bool{}
 	}
 
 	g := graph.New(func(s *Subject) string { return s.ID })
@@ -54,6 +58,13 @@ func Scan(c *Config, pkgs []*packages.Package) (*Graph, error) {
 		if len(pkg.Errors) > 0 {
 			return nil, pkg.Errors[0] // TODO: multierror
 		}
+
+		// when main package, include main() forcely.
+		if pkg.Name == "main" {
+			c.forceIncludeMap["main"] = true
+			c.forceIncludeMap["run"] = true
+		}
+
 		for _, f := range pkg.Syntax {
 			if err := scanner.Scan(pkg, f); err != nil {
 				return nil, err

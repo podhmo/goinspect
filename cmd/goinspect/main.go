@@ -50,9 +50,9 @@ func run(options Options) error {
 		ExpandAll:         options.ExpandAll,
 	}
 
-	if strings.HasSuffix(c.PkgPath, "...") {
+	if strings.HasSuffix(c.PkgPath, "/...") {
 		c.OtherPackages = append(c.OtherPackages, c.PkgPath)
-		c.PkgPath = strings.TrimRight(c.PkgPath, "./")
+		c.PkgPath = strings.TrimSuffix(c.PkgPath, "/...")
 	}
 
 	cfg := &packages.Config{

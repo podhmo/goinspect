@@ -146,12 +146,12 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		indent := len(path)
 		if indent == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
-				name := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
+				text := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
-					name = strings.ReplaceAll(name, c.TrimPrefix, "")
+					text = strings.ReplaceAll(text, c.TrimPrefix, "")
 				}
 
-				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isToplevel: true}
+				row := &row{indent: indent, name: node.Name, text: text, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isToplevel: true}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
@@ -171,9 +171,9 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			}
 
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
-				name := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+				text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
-					name = strings.ReplaceAll(name, c.TrimPrefix, "")
+					text = strings.ReplaceAll(text, c.TrimPrefix, "")
 				}
 
 				isRecursive := false
@@ -182,7 +182,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 						isRecursive = true
 					}
 				}
-				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isRecursive: isRecursive}
+				row := &row{indent: indent, name: node.Name, text: text, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isRecursive: isRecursive}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
@@ -196,31 +196,37 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 	seen := make(map[int][]int, len(sameIDRows))
 	if expand {
-		var dumpCache func(*row, int, int)
-		dumpCache = func(row *row, indent int, i int) {
+		var dumpCache func(*row, int, int) int
+		dumpCache = func(row *row, indent int, i int) int {
 			idx := seen[row.id][0]
 			st := rows[idx]
 			seen[row.id] = append(seen[row.id], i)
 			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent), st.text)
-			for _, x := range rows[idx+1:] {
+			idx++
+
+			for {
+				x := rows[idx]
 				if x.indent <= st.indent {
-					break
+					return idx
 				}
 				if showID := len(sameIDRows[x.id]) > 1 && x.hasChildren; showID {
 					if x.isRecursive {
+						seen[x.id] = append(seen[x.id], i)
 						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
 					} else {
 						for _, j := range seen[x.id] {
 							if i == j {
-								return
+								return idx
 							}
 						}
-						dumpCache(x, indent+1, i)
+						idx = dumpCache(x, indent+1, i)
+						continue
 					}
 				} else {
 					seen[x.id] = append(seen[x.id], i)
-					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
+					fmt.Fprintf(w, "%s%s // c%d\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text, x.id)
 				}
+				idx++
 			}
 		}
 
@@ -239,14 +245,13 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					continue
 				}
 			}
-
 			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
 				if len(seen[row.id]) == 0 {
 					seen[row.id] = append(seen[row.id], i)
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else {
-					seen[row.id] = append(seen[row.id], i)
 					if row.isRecursive {
+						seen[row.id] = append(seen[row.id], i)
 						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, row.indent), row.text)
 					} else {
 						dumpCache(row, row.indent, i)
@@ -262,7 +267,6 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			if row.isToplevel {
 				fmt.Fprintln(w, "")
 			}
-
 			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
 				if len(seen[row.id]) == 0 {
 					fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
@@ -284,6 +288,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 type row struct {
 	indent int
+	name   string
 	text   string
 	id     int
 

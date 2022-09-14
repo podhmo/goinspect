@@ -51,6 +51,7 @@ func TestIT(t *testing.T) {
 @@func x.F0()
 @@@func x.log() func()
 @@@func x.F1()
+@@@@func x.log() func()
 @@@@func x.H()
 @@func x.H()`,
 		},

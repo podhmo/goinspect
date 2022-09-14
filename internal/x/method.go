@@ -28,9 +28,13 @@ type W0 struct{}
 
 func (w W0) M0() {
 	G0()
+	w.Inner()
 }
 func (w *W0) M1() {
 	F0()
+	w.Inner()
+}
+func (w *W0) Inner() {
 }
 
 func NewW0() *W0 {

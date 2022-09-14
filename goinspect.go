@@ -151,7 +151,6 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		indent := len(path)
 		if indent == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
-
 				name := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
 					name = strings.ReplaceAll(name, c.TrimPrefix, "")
@@ -171,7 +170,13 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					name = strings.ReplaceAll(name, c.TrimPrefix, "")
 				}
 
-				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0}
+				isRecursive := false
+				for _, x := range path[:len(path)-1] {
+					if x.ID == node.ID {
+						isRecursive = true
+					}
+				}
+				row := &row{indent: indent, text: name, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isRecursive: isRecursive}
 				rows = append(rows, row)
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
@@ -269,4 +274,5 @@ type row struct {
 	kind        Kind
 	hasChildren bool
 	isToplevel  bool
+	isRecursive bool
 }

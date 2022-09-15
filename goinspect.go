@@ -142,7 +142,6 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	prevIndent := 0
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
-
 		if filter != nil {
 			if _, ok := filter[node.ID]; !ok {
 				return
@@ -204,13 +203,13 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			seen[row.id] = append(seen[row.id], i)
 			fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent), st.text)
 			idx++
-
 			for {
 				x := rows[idx]
 				if x.indent <= st.indent {
 					return idx
 				}
-				if showID := len(sameIDRows[x.id]) > 1 && x.hasChildren; showID {
+
+				if showID := len(sameIDRows[x.id]) > 1; showID && x.hasChildren {
 					if x.isRecursive {
 						seen[x.id] = append(seen[x.id], i)
 						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
@@ -220,8 +219,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 								return idx
 							}
 						}
-						idx = dumpCache(x, indent+1, i)
-						continue
+						dumpCache(x, indent+1, i)
 					}
 				} else {
 					seen[x.id] = append(seen[x.id], i)
@@ -247,8 +245,8 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				}
 			}
 
-			if showID := len(sameIDRows[row.id]) > 1; showID {
-				if len(seen[row.id]) == 0 || !row.hasChildren {
+			if showID := len(sameIDRows[row.id]) > 1; showID && row.hasChildren {
+				if len(seen[row.id]) == 0 {
 					seen[row.id] = append(seen[row.id], i)
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else if row.isRecursive {
@@ -267,7 +265,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			if row.isToplevel {
 				fmt.Fprintln(w, "")
 			}
-			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
+			if showID := len(sameIDRows[row.id]) > 1; showID && row.hasChildren {
 				if len(seen[row.id]) == 0 {
 					fmt.Fprintf(w, "%s%s // &%d\n", strings.Repeat(c.Padding, row.indent), row.text, row.id)
 				} else if row.isRecursive {
@@ -283,6 +281,11 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 		}
 	}
+
+	// fmt.Println("")
+	// for i, row := range rows {
+	// 	fmt.Printf("%3d: %s%s\n", i, strings.Repeat("@", row.indent), row.text)
+	// }
 	return nil
 }
 

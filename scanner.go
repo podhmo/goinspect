@@ -111,11 +111,11 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 					if named, ok := recvType.(*types.Named); ok {
 						p := fn.Pkg()
 						if p == nil {
-							return false
+							return true
 						}
 						path := p.Path()
 						if _, ok := s.pkgMap[path]; !ok {
-							return false
+							return true
 						}
 						id := path + "." + named.Obj().Name() + "#" + fn.Name()
 						subject := &Subject{Object: fn, ID: id, Recv: named.Obj().Name(), Kind: KindMethod}

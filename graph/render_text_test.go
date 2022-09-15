@@ -58,6 +58,18 @@ func TestRenderText(t *testing.T) {
 				return g
 			}(),
 		},
+		{msg: "rec", want: "1;\n2;\n1 -> 2;\n2 -> 2;",
+			g: func() *Graph[int, int] {
+				g := Ints()
+
+				n1 := g.Madd(1)
+				n2 := g.Madd(2)
+
+				g.LinkTo(n1, n2)
+				g.LinkTo(n2, n2)
+				return g
+			}(),
+		},
 	}
 
 	for _, c := range cases {

@@ -1,0 +1,6 @@
+package github.com/podhmo/goinspect/internal/x
+
+  func x.RecRoot(n int)
+    func x.R(n int) int
+      func x.H()
+      func x.R(n int) int // recursion

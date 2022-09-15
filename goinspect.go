@@ -246,17 +246,16 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					continue
 				}
 			}
+
 			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
 				if len(seen[row.id]) == 0 {
 					seen[row.id] = append(seen[row.id], i)
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
+				} else if row.isRecursive {
+					seen[row.id] = append(seen[row.id], i)
+					fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else {
-					if row.isRecursive {
-						seen[row.id] = append(seen[row.id], i)
-						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, row.indent), row.text)
-					} else {
-						dumpCache(row, row.indent, i)
-					}
+					dumpCache(row, row.indent, i)
 				}
 			} else {
 				seen[row.id] = append(seen[row.id], i)

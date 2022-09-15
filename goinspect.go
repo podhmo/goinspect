@@ -155,7 +155,11 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 		indent := len(path)
 		if indent == 1 {
-			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
+			if len(node.From) == 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
+				if node.Value.Kind == KindObject && len(node.To) == 0 {
+					return
+				}
+
 				text := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
 					text = strings.ReplaceAll(text, c.TrimPrefix, "")

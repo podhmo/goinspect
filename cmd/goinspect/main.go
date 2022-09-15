@@ -22,7 +22,9 @@ type Options struct {
 	IncludeUnexported bool `flag:"include-unexported"`
 	ExpandAll         bool `flag:"expand-all"`
 	Short             bool `flag:"short"`
-	Debug             bool `flag:"debug"`
+
+	Debug   bool   `flag:"debug"`
+	Padding string `flag:"padding"`
 
 	Pkg   string   `flag:"pkg" required:"true"`
 	Other []string `flag:"other"`
@@ -30,7 +32,7 @@ type Options struct {
 }
 
 func main() {
-	options := &Options{}
+	options := &Options{Padding: "  "}
 	flagstruct.Parse(options)
 
 	if err := run(*options); err != nil {
@@ -45,7 +47,7 @@ func run(options Options) error {
 		PkgPath:       options.Pkg,
 		OtherPackages: options.Other,
 
-		Padding:           "  ",
+		Padding:           options.Padding,
 		IncludeUnexported: options.IncludeUnexported,
 		ExpandAll:         options.ExpandAll,
 		Debug:             options.Debug,

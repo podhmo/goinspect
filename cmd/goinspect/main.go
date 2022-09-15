@@ -202,6 +202,7 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 
 	var prefix, suffix string
 	parts := strings.Split(pkgpath, "/")
+loop:
 	for i, x := range parts {
 		switch x {
 		case ".":
@@ -209,7 +210,8 @@ func fullPkgPath(pkgpath string, cwd string, modInfo mod, pkgs []*packages.Packa
 		case "..":
 			prefix += "../"
 		default:
-			suffix = strings.Join(parts[i-1:], "/")
+			suffix = strings.Join(parts[i:], "/")
+			break loop
 		}
 	}
 

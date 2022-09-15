@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go/token"
 	"io"
+	"log"
+	"os"
 	"strings"
 
 	"github.com/podhmo/goinspect/graph"
@@ -21,6 +23,7 @@ type Config struct {
 	IncludeUnexported bool
 	OtherPackages     []string
 
+	Debug           bool
 	skipHeader      bool
 	forceIncludeMap map[string]bool
 }

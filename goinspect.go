@@ -247,8 +247,8 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				}
 			}
 
-			if showID := len(sameIDRows[row.id]) > 1 && row.hasChildren; showID {
-				if len(seen[row.id]) == 0 {
+			if showID := len(sameIDRows[row.id]) > 1; showID {
+				if len(seen[row.id]) == 0 || !row.hasChildren {
 					seen[row.id] = append(seen[row.id], i)
 					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, row.indent), row.text)
 				} else if row.isRecursive {

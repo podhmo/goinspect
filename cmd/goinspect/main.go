@@ -48,6 +48,7 @@ func run(options Options) error {
 		Padding:           "  ",
 		IncludeUnexported: options.IncludeUnexported,
 		ExpandAll:         options.ExpandAll,
+		Debug:             options.Debug,
 	}
 
 	if strings.HasSuffix(c.PkgPath, "/...") {

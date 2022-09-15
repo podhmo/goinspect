@@ -285,10 +285,13 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		}
 	}
 
-	// fmt.Println("")
-	// for i, row := range rows {
-	// 	fmt.Printf("%3d: %s%s\n", i, strings.Repeat("@", row.indent), row.text)
-	// }
+	if c.Debug {
+		fmt.Fprintln(os.Stderr)
+		log.Printf("** rows of %s **", c.PkgPath)
+		for i, row := range rows {
+			log.Printf("%3d: %s%s", i, strings.Repeat("@", row.indent), row.text)
+		}
+	}
 	return nil
 }
 

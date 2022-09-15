@@ -143,6 +143,17 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
 
+		if filter != nil {
+			if _, ok := filter[node.ID]; !ok {
+				return
+			}
+			for _, x := range path[:len(path)-1] {
+				if _, ok := filter[x.ID]; !ok {
+					return
+				}
+			}
+		}
+
 		indent := len(path)
 		if indent == 1 {
 			if len(node.From) == 0 && len(node.To) > 0 && c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
@@ -156,20 +167,10 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
 				prevIndent = row.indent
 			}
-		} else if (filter != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
-			return
 		} else {
-			if filter != nil {
-				if _, ok := filter[node.ID]; !ok {
-					return
-				}
-				for _, x := range path[:len(path)-1] {
-					if _, ok := filter[x.ID]; !ok {
-						return
-					}
-				}
+			if (filter != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
+				return
 			}
-
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
 				text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
@@ -224,7 +225,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					}
 				} else {
 					seen[x.id] = append(seen[x.id], i)
-					fmt.Fprintf(w, "%s%s // c%d\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text, x.id)
+					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
 				}
 				idx++
 			}

@@ -143,6 +143,8 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 
 	prevIndent := 0
+	ignoreMap := map[int]bool{}
+
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
 		if filter != nil {
@@ -178,6 +180,21 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				return
 			}
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
+				if path[0].Value.Kind == KindObject && path[1].Value.Kind == KindMethod {
+					toplevelMethod := path[1]
+					ignored, exists := ignoreMap[toplevelMethod.ID]
+					if !exists {
+
+						for _, p := range toplevelMethod.From {
+							ignored = p.Value.Kind == KindMethod && p.Value.Recv == toplevelMethod.Value.Recv
+							ignoreMap[toplevelMethod.ID] = ignored
+						}
+					}
+					if ignored {
+						return
+					}
+				}
+
 				text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
 				if c.TrimPrefix != "" {
 					text = strings.ReplaceAll(text, c.TrimPrefix, "")

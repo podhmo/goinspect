@@ -201,7 +201,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, only map[int]struct{}
 					// if c.Debug {
 					// 	fmt.Fprintf(os.Stdout, "ignored=%-5v %-20s %10s %20s - %20s %-10s\n", ignored, strings.Repeat("#", len(path)), path[0].Name, toplevelMethod.Name, node.Name, strings.Repeat("*", len(node.To)))
 					// }
-					if ignored {
+					if ignored { // TODO: ignored but want to output with another situation (currently broken)
 						return
 					}
 				}

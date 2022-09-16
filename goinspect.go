@@ -184,12 +184,23 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, only map[int]struct{}
 					toplevelMethod := path[1]
 					ignored, exists := ignoreMap[toplevelMethod.ID]
 					if !exists {
-
 						for _, p := range toplevelMethod.From {
-							ignored = p.Value.Kind == KindMethod && p.Value.Recv == toplevelMethod.Value.Recv
-							ignoreMap[toplevelMethod.ID] = ignored
+							if toplevelMethod.ID == p.ID {
+								continue
+							}
+							if node.ID == p.ID {
+								continue
+							}
+							if p.Value.Kind == KindMethod && p.Value.Recv == toplevelMethod.Value.Recv {
+								ignored = true
+								break
+							}
 						}
+						ignoreMap[toplevelMethod.ID] = ignored
 					}
+					// if c.Debug {
+					// 	fmt.Fprintf(os.Stdout, "ignored=%-5v %-20s %10s %20s - %20s %-10s\n", ignored, strings.Repeat("#", len(path)), path[0].Name, toplevelMethod.Name, node.Name, strings.Repeat("*", len(node.To)))
+					// }
 					if ignored {
 						return
 					}

@@ -132,7 +132,7 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 	return dump(w, c, g, selected, seen)
 }
 
-func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct{}) error {
+func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, only map[int]struct{}) error {
 	pkgpath := c.PkgPath
 	expand := c.ExpandAll
 
@@ -147,12 +147,12 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
-		if filter != nil {
-			if _, ok := filter[node.ID]; !ok {
+		if only != nil {
+			if _, ok := only[node.ID]; !ok {
 				return
 			}
 			for _, x := range path[:len(path)-1] {
-				if _, ok := filter[x.ID]; !ok {
+				if _, ok := only[x.ID]; !ok {
 					return
 				}
 			}
@@ -176,7 +176,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 				prevIndent = row.indent
 			}
 		} else {
-			if (filter != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
+			if (only != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
 				return
 			}
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {

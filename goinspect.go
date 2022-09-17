@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/podhmo/goinspect/graph"
@@ -132,9 +133,25 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 
 func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct{}) error {
 	pkgpath := c.PkgPath
+	expand := c.ExpandAll
 
 	parts := strings.Split(pkgpath, "/")
 	prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
+
+	{
+		sorted := g.SortedByFrom(nodes)
+		sortedMap := make(map[int]int, len(sorted))
+		for i, n := range sorted {
+			sortedMap[n.ID] = i
+		}
+		g.Walk(func(n *Node) {
+			if n.Value.Kind == KindObject {
+				if len(n.To) > 0 {
+					sort.SliceStable(n.To, func(i, j int) bool { return sortedMap[n.To[i].ID] < sortedMap[n.To[j].ID] })
+				}
+			}
+		})
+	}
 
 	sections := make(map[int]*section, len(nodes))
 	order := make([]*section, 0, len(nodes))
@@ -231,6 +248,9 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 			fmt.Fprintf(w, "%3d: %s %s  // &%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
 		} else {
 			fmt.Fprintf(w, "%3d: %s %s  // *%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
+			if !expand {
+				return
+			}
 		}
 		if recursive {
 			return
@@ -242,6 +262,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		}
 		stack = stack[:len(stack)-1] // pop
 	}
+
 	for _, s := range order {
 		if _, visited := seen[s.node.ID]; visited {
 			continue

@@ -31,7 +31,6 @@ package github.com/podhmo/goinspect/internal/x
   type x.W0 struct{}
     func (x.W0).M0() // *16
     func (*x.W0).M1() // *17
-    func (*x.W0).Inner()
     func (*x.W0).M2(v interface{})
 
   func x.RecRoot(n int)

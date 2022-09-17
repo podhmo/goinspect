@@ -17,7 +17,6 @@ package github.com/podhmo/goinspect/internal/x
     func x/sub.X()
 
   type x.state struct{}
-    func (*x.state).mark()
     func (*x.state).eval(v interface{})
       func (*x.state).mark()
 

@@ -5,4 +5,4 @@ package github.com/podhmo/goinspect/internal/x
       func x.H()
       func x.Even(n int) bool
         func x.H()
-        func x.Odd(n int) bool // recursion
+        func x.Odd(n int) bool  // recursion

@@ -230,6 +230,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	seen := make(map[int]bool, len(nodes))
 	var stack []*section
 	var walk func(*section, int)
+
 	walk = func(s *section, indent int) {
 		recursive := false
 		for _, x := range stack {
@@ -244,8 +245,10 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		}
 		if counter[s.node.ID] == 1 {
 			fmt.Fprintf(w, "%3d: %s %s\n", indent, strings.Repeat(c.Padding, indent), s.text)
+			seen[s.node.ID] = true
 		} else if _, visited := seen[s.node.ID]; !visited {
 			fmt.Fprintf(w, "%3d: %s %s  // &%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
+			seen[s.node.ID] = true
 		} else {
 			fmt.Fprintf(w, "%3d: %s %s  // *%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
 			if !expand {
@@ -255,7 +258,7 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 		if recursive {
 			return
 		}
-		seen[s.node.ID] = true
+
 		stack = append(stack, s) // push
 		for _, child := range s.body {
 			walk(child, indent+1)
@@ -264,6 +267,9 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 	}
 
 	for _, s := range order {
+		if !c.NeedName(s.node.Name) {
+			continue
+		}
 		if _, visited := seen[s.node.ID]; visited {
 			continue
 		}

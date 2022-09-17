@@ -47,21 +47,21 @@ func TestIT(t *testing.T) {
 			msg: "F", names: []string{"F"},
 			want: `
 @func x.F(s x.S)
-@@func x.log() func()
+@@func x.log() func()  // &3
 @@func x.F0()
-@@@func x.log() func()
+@@@func x.log() func()  // *3
 @@@func x.F1()
-@@@@func x.log() func()
-@@@@func x.H()
-@@func x.H()`,
+@@@@func x.log() func()  // *3
+@@@@func x.H()  // &5
+@@func x.H()  // *5`,
 		},
 		{
 			msg: "G", names: []string{"G"},
 			want: `
 @func x.G()
-@@func x.log() func()
+@@func x.log() func()  // &3
 @@func x.G0()
-@@@func x.log() func()
+@@@func x.log() func()  // *3
 @@@func x.H()
 @@func x/sub.X()`,
 			},

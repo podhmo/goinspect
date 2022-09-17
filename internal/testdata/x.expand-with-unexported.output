@@ -16,6 +16,11 @@ package github.com/podhmo/goinspect/internal/x
       func x.H()
     func x/sub.X()
 
+  type x.state struct{}
+    func (*x.state).mark()
+    func (*x.state).eval(v interface{})
+      func (*x.state).mark()
+
   type x.W struct{}
     func (*x.W).Method(s x.S)
       func x.G0()
@@ -70,6 +75,9 @@ package github.com/podhmo/goinspect/internal/x
           func x.log() func()
           func x.H()
       func (*x.W0).Inner()
+    func (*x.W0).M2(v interface{})
+      func (*x.state).eval(v interface{})
+        func (*x.state).mark()
 
   func x.RecRoot(n int)
     func x.R(n int) int

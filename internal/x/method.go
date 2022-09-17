@@ -1,5 +1,12 @@
 package x
 
+type state struct{}
+
+func (s *state) mark() {}
+func (s *state) eval(v interface{}) {
+	s.mark()
+}
+
 func (w *W) Method(s S) {
 	G0()
 	defer log()()
@@ -36,7 +43,9 @@ func (w *W0) M1() {
 }
 func (w *W0) Inner() {
 }
-
+func (w *W0) M2(v interface{}) {
+	(&state{}).eval(v)
+}
 func NewW0() *W0 {
 	return &W0{}
 }

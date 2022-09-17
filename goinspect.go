@@ -216,21 +216,22 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					return idx
 				}
 
+				idt := indent + (x.indent - st.indent)
 				if showID := len(sameIDRows[x.id]) > 1; showID && x.hasChildren {
 					if x.isRecursive {
 						seen[x.id] = append(seen[x.id], i)
-						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
+						fmt.Fprintf(w, "%s%s // recursion\n", strings.Repeat(c.Padding, idt), x.text)
 					} else {
 						for _, j := range seen[x.id] {
 							if i == j {
 								return idx
 							}
 						}
-						dumpCache(x, indent+1, i)
+						dumpCache(x, idt, i)
 					}
 				} else {
 					seen[x.id] = append(seen[x.id], i)
-					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, indent+(x.indent-st.indent)), x.text)
+					fmt.Fprintf(w, "%s%s\n", strings.Repeat(c.Padding, idt), x.text)
 				}
 				idx++
 			}

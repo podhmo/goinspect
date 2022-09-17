@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"go/token"
 	"io"
-	"log"
-	"os"
-	"sort"
 	"strings"
 
 	"github.com/podhmo/goinspect/graph"
@@ -135,30 +132,14 @@ func Dump(w io.Writer, c *Config, g *Graph, nodes []*Node) error {
 
 func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct{}) error {
 	pkgpath := c.PkgPath
-	expand := c.ExpandAll
-
-	rows := make([]*row, 0, len(nodes))
-	sameIDRows := map[int][]*row{}
 
 	parts := strings.Split(pkgpath, "/")
 	prefix := strings.Join(parts[:len(parts)-1], "/") + "/"
 
-	{
-		sorted := g.SortedByFrom(nodes)
-		sortedMap := make(map[int]int, len(sorted))
-		for i, n := range sorted {
-			sortedMap[n.ID] = i
-		}
-		g.Walk(func(n *Node) {
-			if n.Value.Kind == KindObject {
-				if len(n.To) > 0 {
-					sort.SliceStable(n.To, func(i, j int) bool { return sortedMap[n.To[i].ID] < sortedMap[n.To[j].ID] })
-				}
-			}
-		})
-	}
+	sections := make(map[int]*section, len(nodes))
+	order := make([]*section, 0, len(nodes))
+	counter := make(map[int]int, len(nodes))
 
-	prevIndent := 0
 	g.WalkPath(func(path []*Node) {
 		node := path[len(path)-1]
 		if filter != nil {
@@ -179,189 +160,101 @@ func dump(w io.Writer, c *Config, g *Graph, nodes []*Node, filter map[int]struct
 					return
 				}
 
-				text := strings.ReplaceAll(path[indent-1].Value.Object.String(), prefix, "")
-				if c.TrimPrefix != "" {
-					text = strings.ReplaceAll(text, c.TrimPrefix, "")
+				if _, ok := sections[node.ID]; !ok {
+					text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+					if c.TrimPrefix != "" {
+						text = strings.ReplaceAll(text, c.TrimPrefix, "")
+					}
+					s := &section{
+						node: node,
+						text: text,
+					}
+					sections[node.ID] = s
+					order = append(order, s)
 				}
-
-				row := &row{indent: indent, name: node.Name, text: text, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isToplevel: true}
-				rows = append(rows, row)
-				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
-				prevIndent = row.indent
+				counter[node.ID]++
 			}
 		} else {
-			if (filter != nil || prevIndent == 0) && prevIndent < indent && indent-prevIndent > 1 { // for --only with sub nodes
-				return
-			}
 			if c.NeedName(node.Name) && (node.Value.Recv == "" || c.NeedName(node.Value.Recv)) {
-				text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
-				if c.TrimPrefix != "" {
-					text = strings.ReplaceAll(text, c.TrimPrefix, "")
+				parent := path[len(path)-2]
+				p, ok := sections[parent.ID]
+				if !ok {
+					text := strings.ReplaceAll(parent.Value.Object.String(), prefix, "")
+					if c.TrimPrefix != "" {
+						text = strings.ReplaceAll(text, c.TrimPrefix, "")
+					}
+					p = &section{
+						node: parent,
+						text: text,
+					}
+					sections[parent.ID] = p
+					order = append(order, p)
 				}
 
-				isRecursive := false
-				for _, x := range path[:len(path)-1] {
-					if x.ID == node.ID {
-						isRecursive = true
+				s, ok := sections[node.ID]
+				if !ok {
+					text := strings.ReplaceAll(node.Value.Object.String(), prefix, "")
+					if c.TrimPrefix != "" {
+						text = strings.ReplaceAll(text, c.TrimPrefix, "")
 					}
+					s = &section{
+						node: node,
+						text: text,
+					}
+					sections[node.ID] = s
+					order = append(order, s)
 				}
-				row := &row{indent: indent, name: node.Name, text: text, id: node.ID, kind: node.Value.Kind, hasChildren: len(node.To) > 0, isRecursive: isRecursive}
-				rows = append(rows, row)
-				sameIDRows[node.ID] = append(sameIDRows[node.ID], row)
-				prevIndent = row.indent
+				p.body = append(p.body, s)
+				counter[node.ID]++
 			}
 		}
-	}, nodes)
+	}, g.SortedByFrom(nodes))
 
-	if !c.skipHeader {
-		fmt.Fprintf(w, "package %s\n", pkgpath)
+	seen := make(map[int]bool, len(nodes))
+	var stack []*section
+	var walk func(*section, int)
+	walk = func(s *section, indent int) {
+		recursive := false
+		for _, x := range stack {
+			if x.node.ID == s.node.ID {
+				recursive = true
+			}
+		}
+
+		suffix := ""
+		if recursive {
+			suffix = " recursion"
+		}
+		if counter[s.node.ID] == 1 {
+			fmt.Fprintf(w, "%3d: %s %s\n", indent, strings.Repeat(c.Padding, indent), s.text)
+		} else if _, visited := seen[s.node.ID]; !visited {
+			fmt.Fprintf(w, "%3d: %s %s  // &%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
+		} else {
+			fmt.Fprintf(w, "%3d: %s %s  // *%d%s\n", indent, strings.Repeat(c.Padding, indent), s.text, s.node.ID, suffix)
+		}
+		if recursive {
+			return
+		}
+		seen[s.node.ID] = true
+		stack = append(stack, s) // push
+		for _, child := range s.body {
+			walk(child, indent+1)
+		}
+		stack = stack[:len(stack)-1] // pop
 	}
-
-	seen := make(map[int][]int, len(sameIDRows))
-	if expand {
-		var dumpCache func(*row, int, int) int
-		dumpCache = func(row *row, indent int, i int) int {
-			idx := seen[row.id][0]
-			st := rows[idx]
-			seen[row.id] = append(seen[row.id], i)
-			emit(w, c, indent, st)
-			if c.Debug {
-				fmt.Fprintf(w, "  // c *%d\n", st.id)
-			} else {
-				fmt.Fprintln(w, "")
-			}
-			idx++
-			for {
-				x := rows[idx]
-				if x.indent <= st.indent {
-					return idx
-				}
-
-				idt := indent + (x.indent - st.indent)
-				if showID := len(sameIDRows[x.id]) > 1; showID {
-					if x.isRecursive {
-						seen[x.id] = append(seen[x.id], i)
-						emit(w, c, idt, x)
-						if c.Debug {
-							fmt.Fprintf(w, "  // c *%d  recursion\n", x.id)
-						} else {
-							fmt.Fprintln(w, " // recursion")
-						}
-					} else {
-						for _, j := range seen[x.id] {
-							if i == j {
-								return idx
-							}
-						}
-						dumpCache(x, idt, i)
-					}
-				} else {
-					seen[x.id] = append(seen[x.id], i)
-					emit(w, c, idt, x)
-					if c.Debug {
-						fmt.Fprintf(w, "  // c *%d\n", x.id)
-					} else {
-						fmt.Fprintln(w, "")
-					}
-				}
-				idx++
-			}
+	for _, s := range order {
+		if _, visited := seen[s.node.ID]; visited {
+			continue
 		}
-
-		scopeID := 0
-		var scopeKind Kind
-		for i, row := range rows {
-			if row.isToplevel {
-				fmt.Fprintln(w, "")
-				scopeID = i
-				scopeKind = row.kind
-			}
-
-			if row.indent == 2 && scopeKind == KindObject { // skip used method declaration
-				hist, ok := seen[row.id]
-				if ok && scopeID < hist[len(hist)-1] {
-					continue
-				}
-			}
-
-			if showID := len(sameIDRows[row.id]) > 1; showID {
-				if len(seen[row.id]) == 0 {
-					seen[row.id] = append(seen[row.id], i)
-					emit(w, c, row.indent, row)
-					if c.Debug {
-						fmt.Fprintf(w, "  // &%d\n", row.id) // define reference
-					} else {
-						fmt.Fprintln(w, "")
-					}
-				} else if row.isRecursive {
-					seen[row.id] = append(seen[row.id], i)
-					emit(w, c, row.indent, row)
-					if c.Debug {
-						fmt.Fprintf(w, "  // *%d recursion\n", row.id) // define reference
-					} else {
-						fmt.Fprintln(w, "  // recursion")
-					}
-				} else {
-					dumpCache(row, row.indent, i)
-				}
-			} else {
-				seen[row.id] = append(seen[row.id], i)
-				emit(w, c, row.indent, row)
-				fmt.Fprintln(w, "")
-			}
-		}
-	} else {
-		for i, row := range rows {
-			if row.isToplevel {
-				fmt.Fprintln(w, "")
-			}
-			if showID := len(sameIDRows[row.id]) > 1; showID {
-				if len(seen[row.id]) == 0 {
-					emit(w, c, row.indent, row)
-					fmt.Fprintf(w, "  // &%d\n", row.id) // define reference
-				} else if row.isRecursive {
-					emit(w, c, row.indent, row)
-					fmt.Fprintf(w, "  // *%d recursion\n", row.id)
-				} else {
-					emit(w, c, row.indent, row)
-					fmt.Fprintf(w, "  // *%d\n", row.id) // use reference
-				}
-				seen[row.id] = append(seen[row.id], i)
-			} else {
-				emit(w, c, row.indent, row)
-				fmt.Fprintln(w, "")
-				seen[row.id] = append(seen[row.id], i)
-			}
-
-		}
-	}
-
-	if c.Debug {
-		fmt.Fprintln(os.Stderr)
-		log.Printf("** rows of %s **", c.PkgPath)
-		for i, row := range rows {
-			log.Printf("%3d: %s%s", i, strings.Repeat("@", row.indent), row.text)
-		}
+		fmt.Fprintln(w, "")
+		walk(s, 0)
 	}
 	return nil
 }
 
-func emit(w io.Writer, c *Config, indent int, row *row) {
-	if c.Debug {
-		fmt.Fprintf(w, "%3d: %s%s", indent, strings.Repeat(c.Padding, indent), row.text)
-	} else {
-		fmt.Fprintf(w, "%s%s", strings.Repeat(c.Padding, indent), row.text)
-	}
-}
-
-type row struct {
-	indent int
-	name   string
-	text   string
-	id     int
-
-	kind        Kind
-	hasChildren bool
-	isToplevel  bool
+type section struct {
+	node        *Node
+	text        string
+	body        []*section
 	isRecursive bool
 }

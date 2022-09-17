@@ -12,8 +12,6 @@ package github.com/podhmo/goinspect/internal/x
     func x/sub.X()
 
   type x.W struct{}
-    func (*x.W).Method(s x.S)
-      func x.G0()  // *8
     func (*x.W).MethodWithCompoliteLiteral(s x.S)
       func (x.W0).M0()  // &16
         func x.G0()  // *8
@@ -26,13 +24,15 @@ package github.com/podhmo/goinspect/internal/x
     func (*x.W).MethodWithFactoryFunction(s x.S)
       func (*x.W0).M1()  // *17
       func x.NewW0() *x.W0
+    func (*x.W).Method(s x.S)
+      func x.G0()  // *8
     func (x.W).String() string
 
   type x.W0 struct{}
-    func (x.W0).M0()  // *16
     func (*x.W0).M1()  // *17
-    func (*x.W0).Inner()  // *23
+    func (x.W0).M0()  // *16
     func (*x.W0).M2(v interface{})
+    func (*x.W0).Inner()  // *23
 
   func x.RecRoot(n int)
     func x.R(n int) int  // &25

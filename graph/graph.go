@@ -72,6 +72,78 @@ type key struct {
 	next int
 }
 
+// topological sort
+func (g *Graph[K, T]) SortedByFrom(nodes []*Node[T]) []*Node[T] {
+	if nodes == nil {
+		nodes = g.Nodes
+	}
+	only := make(map[int]bool, len(nodes))
+	for _, n := range g.Nodes {
+		only[n.ID] = false
+	}
+	for _, n := range nodes {
+		only[n.ID] = true
+	}
+
+	r := make([]*Node[T], 0, len(nodes))
+	seen := make(map[int]struct{}, len(nodes))
+	var walk func(n *Node[T])
+	walk = func(n *Node[T]) {
+		if _, ok := seen[n.ID]; ok {
+			return
+		}
+		seen[n.ID] = struct{}{}
+		if ok := only[n.ID]; !ok {
+			return
+		}
+
+		for _, next := range n.From {
+			walk(next)
+		}
+		r = append(r, n)
+	}
+	for _, n := range nodes {
+		walk(n)
+	}
+	return r
+}
+
+// topological sort
+func (g *Graph[K, T]) SortedByTo(nodes []*Node[T]) []*Node[T] {
+	if nodes == nil {
+		nodes = g.Nodes
+	}
+	only := make(map[int]bool, len(nodes))
+	for _, n := range g.Nodes {
+		only[n.ID] = false
+	}
+	for _, n := range nodes {
+		only[n.ID] = true
+	}
+
+	r := make([]*Node[T], 0, len(nodes))
+	seen := make(map[int]struct{}, len(nodes))
+	var walk func(n *Node[T])
+	walk = func(n *Node[T]) {
+		if _, ok := seen[n.ID]; ok {
+			return
+		}
+		seen[n.ID] = struct{}{}
+		if ok := only[n.ID]; !ok {
+			return
+		}
+
+		for _, next := range n.To {
+			walk(next)
+		}
+		r = append(r, n)
+	}
+	for _, n := range nodes {
+		walk(n)
+	}
+	return r
+}
+
 func (g *Graph[K, T]) WalkPath(fn func([]*Node[T]), nodes []*Node[T]) {
 	if nodes == nil {
 		nodes = g.Nodes

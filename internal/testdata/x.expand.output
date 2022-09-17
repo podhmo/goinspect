@@ -55,9 +55,9 @@ package github.com/podhmo/goinspect/internal/x
   func x.RecRoot(n int)
     func x.R(n int) int
       func x.H()
-      func x.R(n int) int // recursion
+      func x.R(n int) int  // recursion
     func x.Odd(n int) bool
       func x.H()
       func x.Even(n int) bool
         func x.H()
-        func x.Odd(n int) bool // recursion
+        func x.Odd(n int) bool  // recursion

@@ -90,7 +90,9 @@ func (s *Scanner) scanFuncDecl(pkg *packages.Package, f *file, decl *ast.FuncDec
 				subject := &Subject{ID: id, Object: ob, Recv: typob.Name(), Kind: KindMethod}
 				node = s.g.Madd(subject)
 				node.Name = decl.Name.Name
-				s.g.LinkTo(parent, node)
+				if s.Config.IncludeStruct {
+					s.g.LinkTo(parent, node)
+				}
 			}
 		}
 	}

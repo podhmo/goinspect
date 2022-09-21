@@ -22,6 +22,7 @@ type Config struct {
 
 	ExpandAll         bool
 	IncludeUnexported bool
+	IncludeStruct     bool
 	OtherPackages     []string
 
 	Debug           bool

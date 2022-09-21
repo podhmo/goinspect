@@ -22,6 +22,7 @@ type Options struct {
 	IncludeUnexported bool `flag:"include-unexported"`
 	ExpandAll         bool `flag:"expand-all"`
 	Short             bool `flag:"short"`
+	OmitStruct        bool `flag:"omit-struct"`
 
 	Debug   bool   `flag:"debug"`
 	Padding string `flag:"padding"`
@@ -49,6 +50,7 @@ func run(options Options) error {
 
 		Padding:           options.Padding,
 		IncludeUnexported: options.IncludeUnexported,
+		IncludeStruct:     !options.OmitStruct,
 		ExpandAll:         options.ExpandAll,
 		Debug:             options.Debug,
 	}

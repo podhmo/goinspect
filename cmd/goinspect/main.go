@@ -19,17 +19,17 @@ import (
 )
 
 type Options struct {
-	IncludeUnexported bool `flag:"include-unexported"`
-	ExpandAll         bool `flag:"expand-all"`
-	Short             bool `flag:"short"`
-	OmitStruct        bool `flag:"omit-struct"`
+	IncludeUnexported bool `flag:"include-unexported" help:"include unexported symbols in output"`
+	ExpandAll         bool `flag:"expand-all" help:"expand all output"`
+	Short             bool `flag:"short" help:"use short representations of package path"`
+	OmitStruct        bool `flag:"omit-struct" help:"omit toplevel struct node in output"`
 
 	Debug   bool   `flag:"debug"`
-	Padding string `flag:"padding"`
+	Padding string `flag:"padding" help:"padding text"`
 
-	Pkg   string   `flag:"pkg" required:"true"`
-	Other []string `flag:"other"`
-	Only  []string `flag:"only"`
+	Pkg   string   `flag:"pkg" required:"true" help:"target package"`
+	Other []string `flag:"other" help:"the included packages in output"`
+	Only  []string `flag:"only" help:"selected symbols"`
 }
 
 func main() {
